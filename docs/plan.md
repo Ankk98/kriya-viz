@@ -72,7 +72,7 @@ So there is **no ready-made annotation tool** that fits Action100M in the way yo
 - **What**: Optional **data-prep script** (e.g. in Action100M repo) that:
   - Reads parquet from the dataset’s **`data/`** folder (e.g. `./dataset/data/*.parquet` when the repo has a `dataset` symlink),
   - For each video row: outputs **one JSON file** with `video_uid`, `metadata`, `nodes` (and optionally `video_src`). Same shape as §13.
-  - Reference: Action100M’s `scripts/download_action100m_for_via.py` already reads parquet columns `video_uid`, `metadata`, `nodes` and writes `raw_annotations/.../action100m_raw.json` per video; a dedicated “one JSON per video for the visualizer” script can follow that pattern (or reuse that output: the visualizer can load those raw JSONs + a video file).
+  - Reference: Action100M’s `scripts/download_action100m_for_via.py` already reads parquet columns `video_uid`, `metadata`, `nodes` and writes `raw_annotations/1.json`, `2.json`, … per video; a dedicated “one JSON per video for the visualizer” script can follow that pattern (or reuse that output: the visualizer can load those raw JSONs + a video file).
 - **Visualizer**: **No Python dependency.** The app is HTML/JS only. User loads **two things**: (1) annotation JSON file, (2) video file. So the tool loads 2 files (video + annotation file); parquet is only used by the optional data-prep step.
 - **Pros**: Clear separation (dataset → JSON; app → view only); no Python in the browser or in the visualizer repo.
 - **Cons**: Extra step to run the script when you add new videos (or use existing VIA download output as-is).
@@ -684,10 +684,10 @@ If the source data is parquet (e.g. in `./dataset/data/*.parquet`), an **optiona
 
 - **Input**: Parquet files from the dataset’s **`data/`** folder (e.g. `dataset/data/part-*.parquet` when `dataset` is a symlink to something like `action100m-preview`). Optionally restrict by `video_uid` or a directory of local MP4s.
 - **Output**: One `.json` file per video with shape = `VideoRecord` (§13). The visualizer expects exactly this schema; any parquet/API field or naming differences should be resolved in the data-prep script so the app receives the §13 shape. Optional: set `video_src` to relative path to MP4 (e.g. `videos/<video_uid>.mp4`).
-- **Parquet structure**: Rows have columns `video_uid`, `metadata`, `nodes`. Arrow may return nested/list values; normalize to a flat list of node dicts (see Action100M `scripts/download_action100m_for_via.py`: it reads these columns and writes `raw_annotations/000N_<video_uid>/action100m_raw.json` with `{ "video_uid", "metadata", "nodes" }`). So either:
-  - Run that script and use its **raw_annotations** JSONs as the visualizer input (user opens `raw_annotations/0001_<uid>/action100m_raw.json` + the corresponding video from `videos/`), or
+- **Parquet structure**: Rows have columns `video_uid`, `metadata`, `nodes`. Arrow may return nested/list values; normalize to a flat list of node dicts (see Action100M `scripts/download_action100m_for_via.py`: it reads these columns and writes `raw_annotations/1.json`, `2.json`, … with `{ "video_uid", "metadata", "nodes" }`). So either:
+  - Run that script and use its **raw_annotations** JSONs as the visualizer input (user opens `raw_annotations/1.json` + the corresponding video from `videos/1.mp4`), or
   - Add a small script that reads `dataset/data/*.parquet` and writes one JSON per video into a folder the visualizer can point at.
-- **Example layout**: The download script output (e.g. `action100m_via2/` or `~/repos/Action100M` docs) has `videos/`, `annotations/` (VIA3), and `raw_annotations/` (Action100M JSON per video). The visualizer can load from `raw_annotations/.../action100m_raw.json` + a video file—no new Python in this repo.
+- **Example layout**: The download script output (e.g. `action100m_via2/` or `~/repos/Action100M` docs) has `videos/`, `annotations/` (VIA3), and `raw_annotations/` (Action100M JSON per video: `1.json`, `2.json`, …). The visualizer can load from `raw_annotations/N.json` + a video file—no new Python in this repo.
 
 ---
 
