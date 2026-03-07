@@ -10,7 +10,7 @@
 - **Focus on a specific annotation type** (e.g. “GPT-OSS summary brief” only)
 - **Also show**: transcripts, video title, video description
 
-Dataset path: `./dataset` (parquet under `data/`).
+**Dataset**: This repo has a symlink `./dataset` pointing to the Action100M-style dataset (e.g. `action100m-preview`). The dataset contains a **`data/`** folder with parquet files (e.g. `dataset/data/part-00000.parquet`, `part-00001.parquet`, …). The visualizer does **not** read parquet at runtime: it loads one **annotation JSON** + one **video file** (see §18.1 for optional parquet→JSON data-prep script).
 
 ---
 
@@ -69,13 +69,13 @@ So there is **no ready-made annotation tool** that fits Action100M in the way yo
 
 ### Option C: Static site + small “data prep” script (recommended)
 
-- **What**: Python script (in maml-api or Action100M repo) that:
-  - Reads parquet from `action100m-preview/data/`,
-  - Optionally restricts to videos you have locally (e.g. by `video_uid` list or a directory of downloaded MP4s),
-  - For each video: outputs one JSON file with `video_uid`, `metadata` (title, description, transcript, duration, etc.), `nodes` (full tree), and optionally a `video_src` (relative path to local MP4 or placeholder for YouTube).
-- **Visualizer**: Same as A or B, but always consumes this JSON shape. So the “static” part is: no server at runtime; data is pre-baked JSON (and optionally local video files).
-- **Pros**: Clear separation (dataset → JSON; app → view only); works with both parquet preview and with API output (e.g. from `api_response_to_parquet` + conversion to this JSON); one schema for the viewer.
-- **Cons**: Extra step to run the script when you add new videos.
+- **What**: Optional **data-prep script** (e.g. in Action100M repo) that:
+  - Reads parquet from the dataset’s **`data/`** folder (e.g. `./dataset/data/*.parquet` when the repo has a `dataset` symlink),
+  - For each video row: outputs **one JSON file** with `video_uid`, `metadata`, `nodes` (and optionally `video_src`). Same shape as §13.
+  - Reference: Action100M’s `scripts/download_action100m_for_via.py` already reads parquet columns `video_uid`, `metadata`, `nodes` and writes `raw_annotations/.../action100m_raw.json` per video; a dedicated “one JSON per video for the visualizer” script can follow that pattern (or reuse that output: the visualizer can load those raw JSONs + a video file).
+- **Visualizer**: **No Python dependency.** The app is HTML/JS only. User loads **two things**: (1) annotation JSON file, (2) video file. So the tool loads 2 files (video + annotation file); parquet is only used by the optional data-prep step.
+- **Pros**: Clear separation (dataset → JSON; app → view only); no Python in the browser or in the visualizer repo.
+- **Cons**: Extra step to run the script when you add new videos (or use existing VIA download output as-is).
 
 ### Option D: Backend that serves parquet/DB + frontend
 
@@ -175,7 +175,7 @@ If other datasets on HF use the **same schema** (e.g. `video_uid`, `metadata`, `
 Action100M nodes form a **tree** (forest if multiple roots): each node has `node_id`, `parent_id` (null for root), `level` (0 = root), and temporal bounds `start`, `end`. There is **no tree UI** — only the **timeline** (one row per level) and **nodes at current time** (path + detail). The hierarchy is still needed in memory for:
 
 - **Timeline**: Group nodes by `level`; each row = all nodes at that level, ordered by `start`.
-- **Nodes at current time**: Find all nodes where `start ≤ currentTime < end`; build the **path from root** to the finest such node(s) (walk `parent_id` upward).
+- **Nodes at current time**: Find all nodes where `start ≤ currentTime < end`; sort by duration descending (longest first); show all, each with path from root so none are missed even if from different roots.
 - **Timeline highlight**: The same “nodes at current time” set — draw those segments in a distinct style (e.g. highlighted) on the timeline.
 
 ### 7.1 In-memory representation
@@ -211,7 +211,7 @@ You prefer **vanilla JS** and **simplicity**; use a framework only if the format
 | 3 | **HF dataset id** | **Configurable** (e.g. URL param), with **Action100M as default** (e.g. `facebook/action100m-preview`). |
 | 4 | **Config/split** | **Local download**: no split — just `data/part-*.parquet`. **HF API**: dataset has `config=default`, `split=train` (from `datasets-server.huggingface.co/splits`). So split matters only when using HF rows API; app can default to `config=default` and `split=train` for this dataset. |
 | 5 | **v1 scope** | **Yes**: v1 = file-based only (pick one JSON + one video file); browse + HF in v2. |
-| 6 | **Transcript format** | **SRT only** for now (timestamped); plain text as fallback. |
+| 6 | **Transcript format** | **SRT**: when transcript is valid SRT, support timestamps and auto-scrolling; for all other content show **plain text** only. |
 
 ### Handling “too many levels” on the timeline
 
@@ -332,8 +332,7 @@ Below are ASCII sketches of the main screens and components so the intended UI/U
 +---------------------------------------------+
 ```
 
-- **Breadcrumb**: Path from root to the finest node(s) that contain current time.
-- **Detail**: For the active node(s), show `[start – end]` and the **focused annotation** text. Optional “Details” / “{ }” to open full node JSON popup.
+- **Display**: All nodes at current time, **sorted by duration (longest first)**. For each: breadcrumb path from root to that node, then `[start – end]` and the **focused annotation** text. Optional “Details” / “{ }” to open full node JSON popup. This way nodes from different roots are not missed.
 
 ### 11.4 v2 browse (future) — list then open
 
@@ -386,14 +385,16 @@ Below are ASCII sketches of the main screens and components so the intended UI/U
 
 ## 12. Reference: split and config for HF
 
-- **Local dataset** (e.g. cloned or downloaded `action100m-preview`): Only `data/part-*.parquet`; **no split**. All rows are “one set”.
-- **HF Dataset Viewer API**: For `facebook/action100m-preview`, use `config=default` and `split=train` (from `https://datasets-server.huggingface.co/splits?dataset=facebook/action100m-preview`). So for v2, the app can default to these and allow overriding dataset (and optionally config/split) via URL or config.
+- **Local dataset** (e.g. `./dataset` symlink to `action100m-preview`): Dataset has a **`data/`** folder with `part-*.parquet` files; **no split**. All rows are “one set”. v1 does not read parquet; it uses pre-generated JSON (see §18.1).
+- *(v2 only)* HF Dataset Viewer API: For `facebook/action100m-preview`, use `config=default` and `split=train`. v2 is out of scope for the current plan.
 
 ---
 
 # Part B: Implementation plan (for code generation)
 
-Use this part to **generate or implement** the v1 visualizer in a **new, separate repo**. It defines the exact JSON schema, data structures, algorithms, event flow, suggested repo layout, and an ordered checklist. Stack: **vanilla HTML/CSS/JS**, no build.
+**Scope: v1 only.** Ignore v2 (browse, HF API, YouTube embed) for now. Focus on: load one annotation JSON + one video file; timeline; nodes at current time; transcript (SRT or plain text).
+
+Use this part to **generate or implement** the v1 visualizer (e.g. in this repo). It defines the exact JSON schema, data structures, algorithms, event flow, suggested repo layout, and an ordered checklist. Stack: **vanilla HTML/CSS/JS**, no build.
 
 **How to use this doc:** Start from §13 (schema) and §19 (checklist). Implement in the order of the checklist; refer to §14–18 for SRT parsing, data algorithms, timeline math, event flow, and file layout.
 
@@ -414,7 +415,7 @@ Use this part to **generate or implement** the v1 visualizer in a **new, separat
 
 ## 13. Video record JSON schema (app input)
 
-The app loads **one** “video record” per view. It can come from: (1) user selecting a JSON file (v1), or (2) HF rows API response row (v2). The shape must be identical.
+The app loads **one** “video record” per view. In v1 the user selects **one annotation JSON file** and **one video file** (two files). No required fields: if anything is missing (e.g. no metadata, empty nodes), handle gracefully.
 
 ### 13.1 Root object
 
@@ -441,7 +442,7 @@ interface VideoMetadata {
 }
 ```
 
-- **Transcript**: If it looks like SRT (e.g. starts with `1\n` and contains `-->`), parse as SRT. Otherwise treat as plain text (no seek on click, no time-based highlight).
+- **Transcript**: Support **SRT format only** for timestamped behaviour: when the string looks like SRT (e.g. starts with a digit and contains `-->`), parse as SRT and enable **timestamps + auto-scrolling** (current cue highlighted, scroll into view; click cue → seek). For **all other** transcript content (non-SRT or invalid SRT), show as **plain text** only (no seek, no time-based highlight).
 
 ### 13.3 Node (Action100M segment)
 
@@ -462,7 +463,7 @@ interface Action100MNode {
 }
 ```
 
-- **Null handling**: `gpt` can be `null` for very short segments. `plm_caption`, `plm_action`, `llama3_caption` can be `null`. When reading an annotation field, use empty string if null/undefined.
+- **Null handling**: Nothing is required. If any field is missing, handle gracefully (e.g. treat as null/empty). `gpt` can be `null`; `plm_caption`, `plm_action`, `llama3_caption` can be `null`. When reading an annotation field, use empty string if null/undefined.
 
 ### 13.4 Annotation focus: field list
 
@@ -521,7 +522,7 @@ interface SrtCue {
 
 ### 14.3 Plain-text fallback
 
-If `metadata.transcript` is present but not valid SRT, show it as a single block of text. No per-line seek, no time-based highlight.
+If `metadata.transcript` is present but **not** valid SRT, show it as a **plain text** block only. No per-line seek, no time-based highlight, no auto-scrolling. SRT = timestamps + auto-scrolling; everything else = plain text.
 
 ---
 
@@ -559,10 +560,13 @@ For each node in nodes:
 
 ```text
 INPUT: nodes, currentTime (seconds)
-OUTPUT: activeNodes = nodes where start <= currentTime < end
+OUTPUT: activeNodes = nodes where start <= currentTime < end, ordered for display
 
-activeNodes = nodes.filter(n => n.start <= currentTime && currentTime < n.end)
+1. activeNodes = nodes.filter(n => n.start <= currentTime && currentTime < n.end)
+2. Sort activeNodes by (end - start) descending (longest duration first).
 ```
+
+- **Display order**: Show all active nodes **reverse-sorted by duration** (longest first). So even if there are nodes from another root at the same time, none are missed; the longest segment is shown first (typically the “main” one), then shorter ones. Ideally most of the time only one root has active nodes; when multiple roots have active nodes, all are shown, sorted by duration.
 
 ### 15.4 Path from node to root
 
@@ -578,7 +582,7 @@ While current is not null:
 Return path
 ```
 
-- For “Nodes at current time”: typically take the **finest** active node (e.g. highest level, or one with smallest duration containing currentTime), then path = pathToRoot(finest). Display breadcrumb as path.map(n => label(n)).join(' → ').
+- For “Nodes at current time”: show **each** active node (after the duration sort above). For each, optionally show the path from root to that node (breadcrumb). Display breadcrumb as path.map(n => label(n)).join(' → ').
 
 ### 15.5 Get label for a node (annotation focus)
 
@@ -596,7 +600,7 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
 ### 16.1 Layout constants
 
 - **Timeline total width** in px (e.g. 800 or 100% of container): `timelineWidthPx`.
-- **Video duration** in seconds: `durationSec` = max(node.end over all nodes) or `metadata.duration` or 0.
+- **Video duration** in seconds (timeline length): Use **`metadata.duration`** if present and valid, otherwise **video length** (e.g. from `<video>` element when `loadedmetadata` or from `video.duration`). Fallback: `max(node.end)` over all nodes, then 0. So **prefer metadata.duration or actual video length** for the timeline scale.
 - **Scale**: `pxPerSec = timelineWidthPx / Math.max(durationSec, 1)`.
 
 ### 16.2 Segment position and size (per node)
@@ -608,6 +612,7 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
 
 - Each row has a label “Level 0”, “Level 1”, … (or “Level N”).
 - For each node in `nodesByLevel[level]`, draw a segment (e.g. `<div>` or `<button>`) at `leftPx`, `widthPx`.
+- **Overlapping segments**: If two segments at the same level overlap in time, **draw them overlapping** (no merging). Show a **warning** (e.g. banner or small notice) when overlapping segments are detected so the user is aware.
 - **Highlight**: if node is in `activeNodes` (nodes at current time), apply a CSS class (e.g. `.timeline-segment--active`) for different background/border.
 - **Tooltip/label**: show focused annotation (truncated) on hover or as inline text; empty → “(no label)”.
 - **Click**: `video.currentTime = node.start` (and optionally `video.play()`).
@@ -631,11 +636,11 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
   2. Update timeline: set/remove “active” class on segments that are in `activeNodes`.
   3. Update “Nodes at current time” block: path from root to finest active node, and full focused annotation text; update “Details” target if needed.
   4. If transcript is SRT: find current cue; highlight that cue and scroll transcript so the cue is in view.
-- **`loadedmetadata`** (or when JSON is loaded): Set `durationSec` from metadata or from max(node.end). Build `nodesByLevel` and `nodeById`. Initial render of timeline and metadata/transcript.
+- **`loadedmetadata`** (or when JSON is loaded): Set `durationSec` from **metadata.duration** or **video duration** (when available), else max(node.end). Build `nodesByLevel` and `nodeById`. Initial render of timeline and metadata/transcript.
 
 ### 17.2 User actions
 
-- **Open JSON**: File input → read as text → `JSON.parse` → validate shape (video_uid, metadata, nodes) → store as current `VideoRecord` → build indices → render timeline and metadata; show “Open video” or use `video_src` if present.
+- **Open JSON**: File input → read as text → `JSON.parse` → store as current `VideoRecord` (no strict validation; handle missing/empty fields gracefully) → build indices → render timeline and metadata; show “Open video” or use `video_src` if present.
 - **Open video**: File input → create object URL with `URL.createObjectURL(file)` → set `video.src = url`. Or if `video_src` is a string (relative/absolute URL), set `video.src = video_src` (may require static server for local path).
 - **Annotation dropdown change**: Store selected focus id; re-render timeline labels/tooltips and “Nodes at current time” text.
 - **Click timeline segment**: `video.currentTime = node.start`; no need to “select” a node for tree (tree removed).
@@ -671,13 +676,18 @@ action100m-visualizer/
 
 - **No build**: open `index.html` in browser. For **local video file**, use “Open video” file input and set `video.src = URL.createObjectURL(file)` so no static server is required for the video. For **local JSON**, same (file input). If you later use a static server (e.g. `python -m http.server`), you can set `video_src` in JSON to a path under that server and load video by URL.
 
-### 18.1 Optional: data prep script (separate repo or sibling)
+### 18.1 Optional: data prep script (parquet → JSON)
 
-If annotations are in parquet (e.g. Action100M preview), a small Python script can output one JSON per video for the visualizer:
+The **visualizer has no Python dependency**. It only loads two files: **annotation JSON** + **video file**.
 
-- **Input**: Parquet dir (e.g. `data/*.parquet`), optional list of `video_uid` or path to a directory of local MP4s.
-- **Output**: One `.json` file per video, shape = `VideoRecord` (§13). Optional: write `video_src` as relative path to MP4 if convention is e.g. `videos/<video_uid>.mp4`.
-- **Parquet row**: Each row has `video_uid`, `metadata`, `nodes` (convert Arrow structs to plain dicts as in `notebooks/compare_action100m_schema.ipynb`). Script can live in maml-api or Action100M repo; visualizer repo only consumes the JSON.
+If the source data is parquet (e.g. in `./dataset/data/*.parquet`), an **optional** Python script can produce one JSON per video:
+
+- **Input**: Parquet files from the dataset’s **`data/`** folder (e.g. `dataset/data/part-*.parquet` when `dataset` is a symlink to something like `action100m-preview`). Optionally restrict by `video_uid` or a directory of local MP4s.
+- **Output**: One `.json` file per video with shape = `VideoRecord` (§13). Optional: set `video_src` to relative path to MP4 (e.g. `videos/<video_uid>.mp4`).
+- **Parquet structure**: Rows have columns `video_uid`, `metadata`, `nodes`. Arrow may return nested/list values; normalize to a flat list of node dicts (see Action100M `scripts/download_action100m_for_via.py`: it reads these columns and writes `raw_annotations/000N_<video_uid>/action100m_raw.json` with `{ "video_uid", "metadata", "nodes" }`). So either:
+  - Run that script and use its **raw_annotations** JSONs as the visualizer input (user opens `raw_annotations/0001_<uid>/action100m_raw.json` + the corresponding video from `videos/`), or
+  - Add a small script that reads `dataset/data/*.parquet` and writes one JSON per video into a folder the visualizer can point at.
+- **Example layout**: The download script output (e.g. `action100m_via2/` or `~/repos/Action100M` docs) has `videos/`, `annotations/` (VIA3), and `raw_annotations/` (Action100M JSON per video). The visualizer can load from `raw_annotations/.../action100m_raw.json` + a video file—no new Python in this repo.
 
 ---
 
@@ -735,11 +745,13 @@ Use this order when generating or implementing the app.
    - [ ] Transcript: current cue highlighted; scrollable.
    - [ ] Modal: overlay, scrollable content, Copy button, close button.
 
-10. **Edge cases**
+10. **Edge cases and robustness**
+    - [ ] **Nothing required**: If video_uid, metadata, or nodes are missing or empty, handle gracefully (e.g. show empty state, use defaults).
     - [ ] Empty nodes array: show “Load a JSON file” or empty state.
-    - [ ] durationSec 0 or missing: derive from max(node.end).
-    - [ ] Multiple roots: timeline shows all level-0 segments; nodes at current time can show path from any active root.
+    - [ ] durationSec 0 or missing: use metadata.duration or video duration, else derive from max(node.end).
+    - [ ] Multiple roots: timeline shows all level-0 segments; nodes at current time show all active nodes sorted by duration (longest first).
     - [ ] Orphan node: path stops at node; still show in timeline and active list.
+    - [ ] Overlapping segments at same level: draw overlapping; show a warning when detected.
 
 ---
 
