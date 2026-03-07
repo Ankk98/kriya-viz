@@ -9,12 +9,15 @@
   var Action100MData = global.Action100MData;
 
   /**
-   * Render timeline into container.
-   * options: { timelineWidthPx, maxLevel, onSegmentClick, onSegmentDetails }
+   * Render full timeline into container (scrollable).
+   * options: { timelineWidthPx, secondsInView, maxLevel, onSegmentClick, onSegmentDetails }
+   * secondsInView: how many seconds fit in the visible width; scale so full duration is one long strip.
    */
   function renderTimeline(container, nodesByLevel, durationSec, focusId, activeNodeIds, nodeById, options) {
     options = options || {};
-    var timelineWidthPx = options.timelineWidthPx != null ? options.timelineWidthPx : 800;
+    var visibleWidthPx = options.timelineWidthPx != null ? options.timelineWidthPx : 800;
+    var secondsInView = options.secondsInView != null ? Math.max(5, Number(options.secondsInView)) : 60;
+    if (Number.isNaN(secondsInView)) secondsInView = 60;
     var maxLevel = options.maxLevel != null ? options.maxLevel : null;
     var onSegmentClick = options.onSegmentClick || function () {};
     var onSegmentDetails = options.onSegmentDetails || function () {};
@@ -24,7 +27,9 @@
     if (!nodesByLevel || !nodesByLevel.size || durationSec <= 0) return;
 
     var duration = Math.max(durationSec, 1);
-    var pxPerSec = timelineWidthPx / duration;
+    var pxPerSec = visibleWidthPx / secondsInView;
+    var totalWidthPx = duration * pxPerSec;
+
     var levels = Array.from(nodesByLevel.keys()).sort(function (a, b) { return a - b; });
     if (maxLevel != null && maxLevel !== '') {
       var cap = parseInt(maxLevel, 10);
@@ -50,6 +55,7 @@
 
       var track = document.createElement('div');
       track.className = 'timeline-track';
+      track.style.width = totalWidthPx + 'px';
 
       for (var n = 0; n < nodes.length; n++) {
         var node = nodes[n];

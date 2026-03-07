@@ -19,18 +19,27 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
   color: var(--text);
   background: var(--bg);
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ——— Top bar ——— */
 .top-bar {
+  flex-shrink: 0;
   padding: 0.6rem 1rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -45,6 +54,13 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.top-bar-app-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  margin-right: 0.25rem;
 }
 
 .top-bar-sep {
@@ -111,7 +127,9 @@ body {
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 52px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .section-title {
@@ -121,14 +139,13 @@ body {
   color: var(--text);
 }
 
-/* ——— Top row: video (50%) | nodes (50%), same height = half screen ——— */
+/* ——— Top row: video (50%) | nodes (50%), top half of page ——— */
 .top-row {
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
-  flex-shrink: 0;
-  height: 50vh;
-  min-height: 280px;
+  flex: 0 0 50%;
+  min-height: 200px;
   align-items: stretch;
   min-width: 0;
 }
@@ -220,13 +237,14 @@ body {
   }
 }
 
-/* ——— Timeline (bottom half) ——— */
+/* ——— Timeline (bottom half, scrollable) ——— */
 .timeline-section {
-  flex: 1;
-  min-height: 50vh;
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   margin-bottom: 0;
+  overflow: hidden;
 }
 
 .timeline-header {
@@ -236,6 +254,7 @@ body {
   gap: 1rem;
   flex-shrink: 0;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .timeline-header .section-title {
@@ -266,15 +285,28 @@ body {
   margin-left: 0.25rem;
 }
 
+.timeline-controls input[type="number"] {
+  width: 4em;
+  padding: 0.25rem 0.5rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  margin-left: 0.25rem;
+}
+
 .timeline-wrapper {
   position: relative;
-  flex: 1;
-  min-height: 220px;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .timeline-container {
-  height: 100%;
-  min-height: 220px;
+  flex: 1 1 0;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: auto;
   background: var(--surface);
@@ -310,12 +342,17 @@ body {
   flex: 0 0 70px;
   font-size: 11px;
   color: var(--text-muted);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding-right: 0.5rem;
 }
 
 .timeline-track {
   position: relative;
   height: 24px;
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
 }
 

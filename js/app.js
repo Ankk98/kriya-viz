@@ -34,6 +34,23 @@
     return Math.max(200, containerWidth - labelAndPadding);
   }
 
+  function getSecondsInView() {
+    var el = document.getElementById('timeline-sec-in-view');
+    if (!el || el.value === '') return 30;
+    var n = parseInt(el.value, 10);
+    return Number.isNaN(n) || n < 5 ? 30 : Math.max(5, n);
+  }
+
+  function scrollTimelineToCurrentTime() {
+    if (!timelineContainer || !state.nodesByLevel || !state.nodesByLevel.size || state.durationSec <= 0) return;
+    var secInView = getSecondsInView();
+    var visibleW = getTimelineWidthPx();
+    var pxPerSec = visibleW / secInView;
+    var targetScroll = state.currentTime * pxPerSec - visibleW / 2;
+    var maxScroll = Math.max(0, state.durationSec * pxPerSec - visibleW);
+    timelineContainer.scrollLeft = Math.max(0, Math.min(targetScroll, maxScroll));
+  }
+
   var videoEl = document.getElementById('video');
   var inputJson = document.getElementById('input-json');
   var inputVideo = document.getElementById('input-video');
@@ -129,13 +146,16 @@
       var maxLevel = maxLevelSelect.value || null;
       if (maxLevel === '') maxLevel = null;
       var timelineW = getTimelineWidthPx();
+      var secInView = getSecondsInView();
       Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
         timelineWidthPx: timelineW,
+        secondsInView: secInView,
         maxLevel: maxLevel,
         onSegmentClick: onSegmentClick,
         onSegmentDetails: onSegmentDetails,
         getNodeLabel: getNodeLabel
       });
+      scrollTimelineToCurrentTime();
       var hasOverlap = Action100MData.hasOverlappingSegments(state.nodesByLevel);
       timelineOverlapWarning.hidden = !hasOverlap;
     }
@@ -166,6 +186,7 @@
       videoEl.currentTime = t;
       state.currentTime = t;
       onTimeupdate();
+      scrollTimelineToCurrentTime();
     }
   }
 
@@ -188,6 +209,7 @@
 
     Timeline.updateTimelineActiveState(timelineContainer, activeIds);
     NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
+    scrollTimelineToCurrentTime();
 
     if (state.transcriptCues && state.transcriptCues.length > 0 && transcriptCurrentLineEl) {
       var currentCue = Srt.getCurrentCue(state.transcriptCues, state.currentTime);
@@ -298,6 +320,9 @@
     renderAll();
   });
 
+  var timelineSecInViewEl = document.getElementById('timeline-sec-in-view');
+  if (timelineSecInViewEl) timelineSecInViewEl.addEventListener('change', renderAll);
+
   if (btnMetadata) btnMetadata.addEventListener('click', openMetadataModal);
   if (btnTranscript) btnTranscript.addEventListener('click', openTranscriptModal);
   if (metadataModalClose) metadataModalClose.addEventListener('click', closeMetadataModal);
@@ -343,8 +368,10 @@
         var maxLevel = maxLevelSelect.value || null;
         if (maxLevel === '') maxLevel = null;
         var timelineW = getTimelineWidthPx();
+        var secInView = getSecondsInView();
         Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
           timelineWidthPx: timelineW,
+          secondsInView: secInView,
           maxLevel: maxLevel,
           onSegmentClick: onSegmentClick,
           onSegmentDetails: onSegmentDetails,
