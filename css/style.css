@@ -349,12 +349,32 @@ body {
 .timeline-container {
   flex: 1 1 0;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: auto;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.5rem;
+}
+
+.timeline-labels {
+  flex: 0 0 70px;
+  display: flex;
+  flex-direction: column;
+  padding-right: 0.5rem;
+  overflow: hidden;
+}
+
+.timeline-tracks-scroll {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
+.timeline-tracks-inner {
+  min-height: min-content;
 }
 
 .timeline-empty {
@@ -381,14 +401,16 @@ body {
 }
 
 .timeline-row-label {
-  flex: 0 0 70px;
   font-size: 13px;
   color: var(--text-muted);
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--surface);
-  padding-right: 0.5rem;
+  min-height: 28px;
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+}
+
+.timeline-labels .timeline-row-label:last-child {
+  margin-bottom: 0;
 }
 
 .timeline-track {
@@ -616,6 +638,15 @@ body {
   word-break: break-word;
   white-space: pre-wrap;
   border-bottom: 1px solid var(--border);
+}
+
+.path-modal-step-label {
+  margin-bottom: 0.25rem;
+}
+
+.path-modal-step-meta {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .path-modal-step:last-of-type {

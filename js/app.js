@@ -29,10 +29,10 @@
   var lastTimeupdate = 0;
 
   function getTimelineWidthPx() {
-    if (!timelineContainer) return 800;
-    var containerWidth = timelineContainer.clientWidth;
-    var labelAndPadding = 90;
-    return Math.max(200, containerWidth - labelAndPadding);
+    var scrollEl = document.getElementById('timeline-tracks-scroll');
+    if (scrollEl) return Math.max(200, scrollEl.clientWidth);
+    if (timelineContainer) return Math.max(200, timelineContainer.clientWidth - 70);
+    return 800;
   }
 
   function getSecondsInView() {
@@ -43,13 +43,14 @@
   }
 
   function scrollTimelineToCurrentTime() {
-    if (!timelineContainer || !state.nodesByLevel || !state.nodesByLevel.size || state.durationSec <= 0) return;
+    var scrollEl = document.getElementById('timeline-tracks-scroll');
+    if (!scrollEl || !state.nodesByLevel || !state.nodesByLevel.size || state.durationSec <= 0) return;
     var secInView = getSecondsInView();
     var visibleW = getTimelineWidthPx();
     var pxPerSec = visibleW / secInView;
     var targetScroll = state.currentTime * pxPerSec - visibleW / 2;
     var maxScroll = Math.max(0, state.durationSec * pxPerSec - visibleW);
-    timelineContainer.scrollLeft = Math.max(0, Math.min(targetScroll, maxScroll));
+    scrollEl.scrollLeft = Math.max(0, Math.min(targetScroll, maxScroll));
   }
 
   var videoEl = document.getElementById('video');
@@ -152,7 +153,7 @@
     var meta = record && record.metadata ? record.metadata : {};
 
     // Video label
-    var title = meta.title || record.video_uid || '—';
+    var title = meta.title || (record && record.video_uid) || '—';
     videoLabel.textContent = 'Video: ' + (title || '—');
 
     nodesTimeEl.textContent = '(' + formatTime(state.currentTime) + ')';
@@ -230,9 +231,21 @@
         pathModalBody.textContent = '(root)';
       } else {
         for (var i = 0; i < path.length; i++) {
+          var n = path[i];
           var step = document.createElement('div');
           step.className = 'path-modal-step';
-          step.textContent = getNodeLabel(path[i], state.nodesFocusId);
+          var label = document.createElement('div');
+          label.className = 'path-modal-step-label';
+          label.textContent = getNodeLabel(n, state.nodesFocusId);
+          step.appendChild(label);
+          var meta = document.createElement('div');
+          meta.className = 'path-modal-step-meta';
+          var idStr = n.node_id != null ? String(n.node_id) : '—';
+          var levelStr = n.level != null && !Number.isNaN(Number(n.level)) ? String(n.level) : '—';
+          var startStr = n.start != null && !Number.isNaN(Number(n.start)) ? formatTime(Number(n.start)) : '—';
+          var endStr = n.end != null && !Number.isNaN(Number(n.end)) ? formatTime(Number(n.end)) : '—';
+          meta.textContent = 'id: ' + idStr + ' · level: ' + levelStr + ' · start: ' + startStr + ' · end: ' + endStr;
+          step.appendChild(meta);
           pathModalBody.appendChild(step);
           if (i < path.length - 1) {
             var arrow = document.createElement('div');

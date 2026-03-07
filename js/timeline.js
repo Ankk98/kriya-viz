@@ -41,17 +41,29 @@
       for (var i = 0; i < activeNodeIds.length; i++) activeSet.add(String(activeNodeIds[i]));
     }
 
+    var labelsCol = document.createElement('div');
+    labelsCol.className = 'timeline-labels';
+
+    var tracksScroll = document.createElement('div');
+    tracksScroll.id = 'timeline-tracks-scroll';
+    tracksScroll.className = 'timeline-tracks-scroll';
+
+    var tracksInner = document.createElement('div');
+    tracksInner.className = 'timeline-tracks-inner';
+    tracksInner.style.width = totalWidthPx + 'px';
+
     for (var l = 0; l < levels.length; l++) {
       var level = levels[l];
       var nodes = nodesByLevel.get(level) || [];
-      var row = document.createElement('div');
-      row.className = 'timeline-row';
-      row.setAttribute('data-level', level);
 
       var label = document.createElement('div');
       label.className = 'timeline-row-label';
       label.textContent = 'Level ' + level;
-      row.appendChild(label);
+      labelsCol.appendChild(label);
+
+      var row = document.createElement('div');
+      row.className = 'timeline-row';
+      row.setAttribute('data-level', level);
 
       var track = document.createElement('div');
       track.className = 'timeline-track';
@@ -81,30 +93,36 @@
         labelSpan.textContent = fullLabel.length > 40 ? fullLabel.substring(0, 37) + '…' : fullLabel;
         seg.appendChild(labelSpan);
 
-        seg.addEventListener('click', function (ev) {
-          if (ev.detail === 2) {
-            if (onSegmentDetails) onSegmentDetails(node);
-          } else {
-            onSegmentClick(node);
-          }
-        });
+        (function (capturedNode) {
+          seg.addEventListener('click', function (ev) {
+            if (ev.detail === 2) {
+              if (onSegmentDetails) onSegmentDetails(capturedNode);
+            } else {
+              onSegmentClick(capturedNode);
+            }
+          });
 
-        var detailsBtn = document.createElement('button');
-        detailsBtn.type = 'button';
-        detailsBtn.className = 'timeline-segment-details';
-        detailsBtn.textContent = '{ }';
-        detailsBtn.title = 'View node JSON';
-        detailsBtn.addEventListener('click', function (e) {
-          e.stopPropagation();
-          onSegmentDetails(node);
-        });
-        seg.appendChild(detailsBtn);
+          var detailsBtn = document.createElement('button');
+          detailsBtn.type = 'button';
+          detailsBtn.className = 'timeline-segment-details';
+          detailsBtn.textContent = '{ }';
+          detailsBtn.title = 'View node JSON';
+          detailsBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            onSegmentDetails(capturedNode);
+          });
+          seg.appendChild(detailsBtn);
+        })(node);
 
         track.appendChild(seg);
       }
       row.appendChild(track);
-      container.appendChild(row);
+      tracksInner.appendChild(row);
     }
+
+    tracksScroll.appendChild(tracksInner);
+    container.appendChild(labelsCol);
+    container.appendChild(tracksScroll);
   }
 
   /**
