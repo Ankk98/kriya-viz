@@ -58,4 +58,4 @@ Modern browsers with ES5+ and HTML5 `<video>`. File input and `URL.createObjectU
 
 ## License
 
-Use and adapt as needed for your project.
+MIT License. See [LICENSE](LICENSE). Copyright (c) 2025 Mind and Motion Labs.
