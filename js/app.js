@@ -12,6 +12,7 @@
   var NodesPanel = window.NodesPanel;
   var Metadata = window.Metadata;
   var NodeModal = window.NodeModal;
+  var ListBrowse = window.ListBrowse;
 
   var state = {
     videoRecord: null,
@@ -22,7 +23,9 @@
     nodesByLevel: null,
     nodeById: null,
     transcriptCues: null,
-    transcriptPlain: null
+    transcriptPlain: null,
+    listEntries: [],
+    currentVideoObjectURL: null
   };
 
   var timeupdateThrottleMs = 150;
@@ -54,8 +57,6 @@
   }
 
   var videoEl = document.getElementById('video');
-  var inputJson = document.getElementById('input-json');
-  var inputVideo = document.getElementById('input-video');
   var nodesAnnotationEl = document.getElementById('nodes-annotation');
   var timelineAnnotationEl = document.getElementById('timeline-annotation');
   var videoLabel = document.getElementById('video-label');
@@ -77,6 +78,28 @@
   var pathModalBody = document.getElementById('path-modal-body');
   var pathModalClose = document.getElementById('path-modal-close');
   var maxLevelSelect = document.getElementById('max-level');
+  var listDrawer = document.getElementById('list-drawer');
+  var listDrawerClose = document.getElementById('list-drawer-close');
+  var btnHamburger = document.getElementById('btn-hamburger');
+  var listEmpty = document.getElementById('list-empty');
+  var listCount = document.getElementById('list-count');
+  var listVirtualContainer = document.getElementById('list-virtual-container');
+  var listVirtualInner = document.getElementById('list-virtual-inner');
+  var sourceModal = document.getElementById('source-modal');
+  var sourceModalClose = document.getElementById('source-modal-close');
+  var sourceInputJson = document.getElementById('source-input-json');
+  var sourceInputVideo = document.getElementById('source-input-video');
+  var sourceBtnOpenVideo = document.getElementById('source-btn-open-video');
+  var sourceJsonFilename = document.getElementById('source-json-filename');
+  var sourceVideoFilename = document.getElementById('source-video-filename');
+  var sourceInputVideosDir = document.getElementById('source-input-videos-dir');
+  var sourceInputJsonDir = document.getElementById('source-input-json-dir');
+  var sourceVideosDirname = document.getElementById('source-videos-dirname');
+  var sourceJsonDirname = document.getElementById('source-json-dirname');
+  var sourceFoldersSummary = document.getElementById('source-folders-summary');
+  var sourceBtnOpenList = document.getElementById('source-btn-open-list');
+  var btnChangeSource = document.getElementById('btn-change-source');
+  var listRefreshFn = null;
 
   function formatTime(sec) {
     var s = Math.floor(Number(sec));
@@ -94,6 +117,48 @@
 
   function getNodeLabel(node, focusId) {
     return Action100MData ? Action100MData.getNodeLabel(node, focusId) : '(no label)';
+  }
+
+  function revokeCurrentVideoURL() {
+    if (state.currentVideoObjectURL) {
+      URL.revokeObjectURL(state.currentVideoObjectURL);
+      state.currentVideoObjectURL = null;
+    }
+    if (videoEl) videoEl.removeAttribute('src');
+  }
+
+  function openListDrawer() {
+    if (listDrawer) {
+      listDrawer.classList.add('list-drawer--open');
+      listDrawer.setAttribute('aria-hidden', 'false');
+      if (listRefreshFn) listRefreshFn();
+    }
+  }
+
+  function closeListDrawer() {
+    if (listDrawer) {
+      listDrawer.classList.remove('list-drawer--open');
+      listDrawer.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function toggleListDrawer() {
+    if (listDrawer && listDrawer.classList.contains('list-drawer--open')) closeListDrawer();
+    else openListDrawer();
+  }
+
+  function openSourceModal() {
+    if (sourceModal) {
+      sourceModal.hidden = false;
+      sourceModal.removeAttribute('aria-hidden');
+    }
+  }
+
+  function closeSourceModal() {
+    if (sourceModal) {
+      sourceModal.hidden = true;
+      sourceModal.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function buildStateFromRecord(record) {
@@ -154,7 +219,7 @@
 
     // Video label
     var title = meta.title || (record && record.video_uid) || '—';
-    videoLabel.textContent = 'Video: ' + (title || '—');
+    if (videoLabel) videoLabel.textContent = 'Video: ' + (title || '—');
 
     nodesTimeEl.textContent = '(' + formatTime(state.currentTime) + ')';
 
@@ -354,31 +419,138 @@
     renderAll();
   }
 
-  // ——— File inputs ———
-  inputJson.addEventListener('change', function () {
-    var file = inputJson.files && inputJson.files[0];
-    if (!file) return;
+  // ——— Source modal: single video + JSON ———
+  function updateSingleOpenButton() {
+    var hasJson = sourceInputJson && sourceInputJson.files && sourceInputJson.files[0];
+    var hasVideo = sourceInputVideo && sourceInputVideo.files && sourceInputVideo.files[0];
+    if (sourceBtnOpenVideo) sourceBtnOpenVideo.disabled = !hasJson || !hasVideo;
+  }
+  if (sourceInputJson) {
+    sourceInputJson.addEventListener('change', function () {
+      if (sourceJsonFilename) sourceJsonFilename.textContent = (sourceInputJson.files && sourceInputJson.files[0]) ? sourceInputJson.files[0].name : '—';
+      updateSingleOpenButton();
+    });
+  }
+  if (sourceInputVideo) {
+    sourceInputVideo.addEventListener('change', function () {
+      if (sourceVideoFilename) sourceVideoFilename.textContent = (sourceInputVideo.files && sourceInputVideo.files[0]) ? sourceInputVideo.files[0].name : '—';
+      updateSingleOpenButton();
+    });
+  }
+  if (sourceBtnOpenVideo) {
+    sourceBtnOpenVideo.addEventListener('click', function () {
+      var jsonFile = sourceInputJson && sourceInputJson.files && sourceInputJson.files[0];
+      var videoFile = sourceInputVideo && sourceInputVideo.files && sourceInputVideo.files[0];
+      if (!jsonFile || !videoFile) return;
+      revokeCurrentVideoURL();
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var record = JSON.parse(reader.result);
+          buildStateFromRecord(record);
+          state.currentVideoObjectURL = URL.createObjectURL(videoFile);
+          if (videoEl) videoEl.src = state.currentVideoObjectURL;
+          closeSourceModal();
+          renderAll();
+        } catch (e) {
+          alert('Invalid JSON: ' + e.message);
+        }
+      };
+      reader.onerror = function () { alert('Failed to read JSON file.'); };
+      reader.readAsText(jsonFile);
+    });
+  }
+
+  // ——— Source modal: two folders ———
+  function updateFoldersSummaryAndButton() {
+    var videoFiles = sourceInputVideosDir && sourceInputVideosDir.files ? sourceInputVideosDir.files : [];
+    var jsonFiles = sourceInputJsonDir && sourceInputJsonDir.files ? sourceInputJsonDir.files : [];
+    if (videoFiles.length === 0 && jsonFiles.length === 0) {
+      if (sourceFoldersSummary) { sourceFoldersSummary.hidden = true; sourceFoldersSummary.textContent = ''; }
+      if (sourceBtnOpenList) sourceBtnOpenList.disabled = true;
+      return;
+    }
+    var entries = ListBrowse && ListBrowse.buildListFromTwoFolders ? ListBrowse.buildListFromTwoFolders(videoFiles, jsonFiles) : [];
+    var nVideos = 0, nJson = 0;
+    for (var i = 0; i < videoFiles.length; i++) { if (videoFiles[i].name && /\.(mp4|webm|mov)$/i.test(videoFiles[i].name)) nVideos++; }
+    for (var j = 0; j < jsonFiles.length; j++) { if (jsonFiles[j].name && /\.json$/i.test(jsonFiles[j].name)) nJson++; }
+    if (sourceFoldersSummary) {
+      sourceFoldersSummary.hidden = false;
+      sourceFoldersSummary.textContent = nVideos + ' videos, ' + nJson + ' annotations, ' + entries.length + ' matched.';
+    }
+    if (sourceBtnOpenList) sourceBtnOpenList.disabled = entries.length === 0;
+  }
+  if (sourceInputVideosDir) {
+    sourceInputVideosDir.addEventListener('change', function () {
+      if (sourceVideosDirname) sourceVideosDirname.textContent = (sourceInputVideosDir.files && sourceInputVideosDir.files[0]) ? sourceInputVideosDir.files[0].webkitRelativePath.split('/')[0] || sourceInputVideosDir.files[0].name : '—';
+      updateFoldersSummaryAndButton();
+    });
+  }
+  if (sourceInputJsonDir) {
+    sourceInputJsonDir.addEventListener('change', function () {
+      if (sourceJsonDirname) sourceJsonDirname.textContent = (sourceInputJsonDir.files && sourceInputJsonDir.files[0]) ? sourceInputJsonDir.files[0].webkitRelativePath.split('/')[0] || sourceInputJsonDir.files[0].name : '—';
+      updateFoldersSummaryAndButton();
+    });
+  }
+  if (sourceBtnOpenList) {
+    sourceBtnOpenList.addEventListener('click', function () {
+      var videoFiles = sourceInputVideosDir && sourceInputVideosDir.files ? sourceInputVideosDir.files : [];
+      var jsonFiles = sourceInputJsonDir && sourceInputJsonDir.files ? sourceInputJsonDir.files : [];
+      var arrV = []; for (var i = 0; i < videoFiles.length; i++) arrV.push(videoFiles[i]);
+      var arrJ = []; for (var j = 0; j < jsonFiles.length; j++) arrJ.push(jsonFiles[j]);
+      state.listEntries = ListBrowse && ListBrowse.buildListFromTwoFolders ? ListBrowse.buildListFromTwoFolders(arrV, arrJ) : [];
+      closeSourceModal();
+      if (listCount) listCount.textContent = state.listEntries.length;
+      if (listEmpty) listEmpty.hidden = state.listEntries.length > 0;
+      if (listVirtualContainer) listVirtualContainer.hidden = state.listEntries.length === 0;
+      if (ListBrowse && listVirtualContainer && listVirtualInner && state.listEntries.length > 0) {
+        if (listRefreshFn) listRefreshFn = null;
+        listRefreshFn = ListBrowse.setupVirtualList(listVirtualContainer, state.listEntries, {
+          innerEl: listVirtualInner,
+          onOpenVideo: onListOpenVideo,
+          rowHeight: ListBrowse.ROW_HEIGHT || 40
+        });
+      }
+      openListDrawer();
+    });
+  }
+
+  function onListOpenVideo(index) {
+    var entry = state.listEntries[index];
+    if (!entry || !entry.jsonFile || !entry.videoFile) return;
+    revokeCurrentVideoURL();
     var reader = new FileReader();
     reader.onload = function () {
       try {
         var record = JSON.parse(reader.result);
         buildStateFromRecord(record);
-        if (record.video_src && typeof record.video_src === 'string') {
-          videoEl.src = record.video_src;
-        }
+        state.currentVideoObjectURL = URL.createObjectURL(entry.videoFile);
+        if (videoEl) videoEl.src = state.currentVideoObjectURL;
+        closeListDrawer();
         renderAll();
       } catch (e) {
-        alert('Invalid JSON: ' + e.message);
+        alert('Invalid JSON for this entry: ' + e.message);
       }
     };
-    reader.readAsText(file);
-  });
+    reader.onerror = function () { alert('Failed to read JSON file.'); };
+    reader.readAsText(entry.jsonFile);
+  }
 
-  inputVideo.addEventListener('change', function () {
-    var file = inputVideo.files && inputVideo.files[0];
-    if (!file) return;
-    videoEl.src = URL.createObjectURL(file);
+  if (btnChangeSource) btnChangeSource.addEventListener('click', function () {
+    revokeCurrentVideoURL();
+    openSourceModal();
   });
+  if (btnHamburger) btnHamburger.addEventListener('click', toggleListDrawer);
+  if (listDrawerClose) listDrawerClose.addEventListener('click', closeListDrawer);
+  if (listDrawer) {
+    var listDrawerBackdrop = listDrawer.querySelector('.list-drawer-backdrop');
+    if (listDrawerBackdrop) listDrawerBackdrop.addEventListener('click', closeListDrawer);
+  }
+  if (sourceModalClose) sourceModalClose.addEventListener('click', closeSourceModal);
+  if (sourceModal) {
+    var sourceBackdrop = sourceModal.querySelector('.modal-backdrop');
+    if (sourceBackdrop) sourceBackdrop.addEventListener('click', closeSourceModal);
+  }
 
   // ——— Annotation dropdowns (per section) ———
   function populateAnnotationSelect(selectEl, selectedId) {
@@ -434,7 +606,9 @@
   }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      if (metadataModal && !metadataModal.hidden) closeMetadataModal();
+      if (listDrawer && listDrawer.classList.contains('list-drawer--open')) closeListDrawer();
+      else if (sourceModal && !sourceModal.hidden) closeSourceModal();
+      else if (metadataModal && !metadataModal.hidden) closeMetadataModal();
       else if (transcriptModal && !transcriptModal.hidden) closeTranscriptModal();
       else if (pathModal && !pathModal.hidden) closePathModal();
     }
@@ -495,5 +669,7 @@
   });
 
   // ——— Init ———
+  if (listCount) listCount.textContent = '0';
+  openSourceModal();
   renderAll();
 })();

@@ -9,16 +9,10 @@
 <body>
   <header class="top-bar">
     <div class="top-bar-left">
+      <button type="button" class="icon-btn hamburger-btn" id="btn-hamburger" aria-label="Video list">&equiv;</button>
       <span class="top-bar-app-name" title="Action100M dataset like video action annotation tree visualizer">Kriya Visualizer</span>
       <span class="top-bar-sep">|</span>
-      <label class="file-btn">
-        <span>Open JSON</span>
-        <input type="file" id="input-json" accept=".json" hidden>
-      </label>
-      <label class="file-btn">
-        <span>Open video</span>
-        <input type="file" id="input-video" accept="video/*" hidden>
-      </label>
+      <button type="button" class="text-btn" id="btn-change-source">Change source</button>
       <span class="top-bar-sep">|</span>
       <span id="video-label" class="video-label">Video: —</span>
       <span class="top-bar-sep">|</span>
@@ -27,7 +21,28 @@
     </div>
   </header>
 
-  <main class="main">
+  <!-- Video list drawer (hamburger menu) -->
+  <div id="list-drawer" class="list-drawer" aria-hidden="true">
+    <div class="list-drawer-backdrop"></div>
+    <div class="list-drawer-panel">
+      <div class="list-drawer-header">
+        <h2 class="section-title">Videos: <span id="list-count">0</span></h2>
+        <button type="button" class="modal-close list-drawer-close" id="list-drawer-close" aria-label="Close">&times;</button>
+      </div>
+      <div id="list-empty" class="list-empty">Choose videos and JSON folders from Select source.</div>
+      <div id="list-virtual-container" class="list-virtual-container" hidden>
+        <div class="list-header">
+          <span class="list-col-index">#</span>
+          <span class="list-col-stem">stem / id</span>
+          <span class="list-col-action">Open</span>
+        </div>
+        <div id="list-virtual-inner" class="list-virtual-inner" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content (same layout as before) -->
+  <main id="video-view" class="main">
     <div class="top-row">
       <section class="video-section">
         <div class="video-wrapper">
@@ -91,6 +106,67 @@
     </section>
   </main>
 
+  <!-- Select source modal -->
+  <div id="source-modal" class="modal" role="dialog" aria-labelledby="source-modal-title" aria-modal="true" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content source-modal-content">
+      <div class="modal-header">
+        <h2 id="source-modal-title">Select source</h2>
+        <button type="button" class="modal-close" id="source-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body source-modal-body">
+        <p class="source-modal-intro">Choose how to load your videos and annotations:</p>
+
+        <fieldset class="source-option-block">
+          <legend class="source-option-legend">
+            <input type="radio" name="source-type" id="source-type-single" value="single" checked>
+            <label for="source-type-single">Single video + JSON</label>
+          </legend>
+          <p class="source-option-desc">Pick one video file and one annotation JSON file.</p>
+          <div class="source-option-inputs">
+            <label class="file-btn source-file-label">
+              <span>Choose JSON file</span>
+              <input type="file" id="source-input-json" accept=".json" hidden>
+            </label>
+            <span id="source-json-filename" class="source-filename">—</span>
+          </div>
+          <div class="source-option-inputs">
+            <label class="file-btn source-file-label">
+              <span>Choose video file</span>
+              <input type="file" id="source-input-video" accept="video/*" hidden>
+            </label>
+            <span id="source-video-filename" class="source-filename">—</span>
+          </div>
+          <button type="button" class="file-btn" id="source-btn-open-video" disabled>Open video</button>
+        </fieldset>
+
+        <fieldset class="source-option-block">
+          <legend class="source-option-legend">
+            <input type="radio" name="source-type" id="source-type-folders" value="folders">
+            <label for="source-type-folders">Two folders</label>
+          </legend>
+          <p class="source-option-desc">Pick one folder for videos and one for annotation JSON files. Match by base name (e.g. 1.mp4 ↔ 1.json).</p>
+          <div class="source-option-inputs">
+            <label class="file-btn source-file-label">
+              <span>Choose videos folder</span>
+              <input type="file" id="source-input-videos-dir" webkitdirectory directory multiple hidden>
+            </label>
+            <span id="source-videos-dirname" class="source-filename">—</span>
+          </div>
+          <div class="source-option-inputs">
+            <label class="file-btn source-file-label">
+              <span>Choose JSON folder</span>
+              <input type="file" id="source-input-json-dir" webkitdirectory directory multiple hidden>
+            </label>
+            <span id="source-json-dirname" class="source-filename">—</span>
+          </div>
+          <p id="source-folders-summary" class="source-folders-summary" hidden></p>
+          <button type="button" class="file-btn" id="source-btn-open-list" disabled>Open list</button>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+
   <div id="node-modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true" hidden>
     <div class="modal-backdrop"></div>
     <div class="modal-content">
@@ -144,6 +220,7 @@
   <script src="js/nodes-panel.js"></script>
   <script src="js/metadata.js"></script>
   <script src="js/modal.js"></script>
+  <script src="js/list.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
