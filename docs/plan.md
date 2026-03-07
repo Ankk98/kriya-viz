@@ -188,7 +188,7 @@ Action100M nodes form a **tree** (forest if multiple roots): each node has `node
 ### 7.2 Edge cases
 
 - **Multiple roots**: If `parent_id === null` for more than one node, treat as forest; timeline shows each root’s row; “nodes at current time” may show nodes from different roots.
-- **Orphan nodes**: If `parent_id` points to missing `node_id`, path walk stops at the orphan; still show the node in timeline and in “nodes at current time.”
+- **Orphan nodes**: If `parent_id` points to missing `node_id`, path walk stops at the orphan; still show the node in timeline and in “nodes at current time.” When displaying the breadcrumb, show the path from the first known ancestor to the node (if the path does not reach a level-0 root, optionally prefix with “(no root)” or “?”).
 - **Many levels**: Timeline uses fixed height + vertical scroll and optional “max level” cap (see §9).
 
 ---
@@ -211,7 +211,7 @@ You prefer **vanilla JS** and **simplicity**; use a framework only if the format
 | 3 | **HF dataset id** | **Configurable** (e.g. URL param), with **Action100M as default** (e.g. `facebook/action100m-preview`). |
 | 4 | **Config/split** | **Local download**: no split — just `data/part-*.parquet`. **HF API**: dataset has `config=default`, `split=train` (from `datasets-server.huggingface.co/splits`). So split matters only when using HF rows API; app can default to `config=default` and `split=train` for this dataset. |
 | 5 | **v1 scope** | **Yes**: v1 = file-based only (pick one JSON + one video file); browse + HF in v2. |
-| 6 | **Transcript format** | **SRT**: when transcript is valid SRT, support timestamps and auto-scrolling; for all other content show **plain text** only. |
+| 6 | **Transcript format** | **SRT**: try parsing transcript as SRT; if parse yields ≥1 valid cue, support timestamps and auto-scrolling; otherwise show **plain text** only. |
 
 ### Handling “too many levels” on the timeline
 
@@ -332,7 +332,7 @@ Below are ASCII sketches of the main screens and components so the intended UI/U
 +---------------------------------------------+
 ```
 
-- **Display**: All nodes at current time, **sorted by duration (longest first)**. For each: breadcrumb path from root to that node, then `[start – end]` and the **focused annotation** text. Optional “Details” / “{ }” to open full node JSON popup. This way nodes from different roots are not missed.
+- **Display**: All nodes at current time, **sorted by duration (longest first)**. For each: breadcrumb path from root to that node, then `[start – end]` and the **focused annotation** text. Optional “Details” / “{ }” to open full node JSON popup. This way nodes from different roots are not missed. (The sketch shows one node; when multiple are active, repeat the block for each.)
 
 ### 11.4 v2 browse (future) — list then open
 
@@ -442,7 +442,7 @@ interface VideoMetadata {
 }
 ```
 
-- **Transcript**: Support **SRT format only** for timestamped behaviour: when the string looks like SRT (e.g. starts with a digit and contains `-->`), parse as SRT and enable **timestamps + auto-scrolling** (current cue highlighted, scroll into view; click cue → seek). For **all other** transcript content (non-SRT or invalid SRT), show as **plain text** only (no seek, no time-based highlight).
+- **Transcript**: **Try parsing** `metadata.transcript` as SRT first. If parsing yields at least one cue with valid timestamps, treat as SRT and enable **timestamps + auto-scrolling** (current cue highlighted, scroll into view; click cue → seek). Otherwise show as **plain text** only (no seek, no time-based highlight).
 
 ### 13.3 Node (Action100M segment)
 
@@ -522,7 +522,7 @@ interface SrtCue {
 
 ### 14.3 Plain-text fallback
 
-If `metadata.transcript` is present but **not** valid SRT, show it as a **plain text** block only. No per-line seek, no time-based highlight, no auto-scrolling. SRT = timestamps + auto-scrolling; everything else = plain text.
+**Try parsing first**: run the SRT parser on `metadata.transcript`. If parsing yields at least one cue with valid timestamps, use SRT behaviour (timestamps, seek, highlight, auto-scroll). Otherwise show as a **plain text** block only—no per-line seek, no time-based highlight, no auto-scrolling.
 
 ---
 
@@ -600,7 +600,7 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
 ### 16.1 Layout constants
 
 - **Timeline total width** in px (e.g. 800 or 100% of container): `timelineWidthPx`.
-- **Video duration** in seconds (timeline length): Use **`metadata.duration`** if present and valid, otherwise **video length** (e.g. from `<video>` element when `loadedmetadata` or from `video.duration`). Fallback: `max(node.end)` over all nodes, then 0. So **prefer metadata.duration or actual video length** for the timeline scale.
+- **Video duration** in seconds (timeline length): Use **`metadata.duration`** if present and valid (finite number &gt; 0), otherwise **video length** (e.g. from `<video>` element when `loadedmetadata` or from `video.duration`). Fallback: `max(node.end)` over all nodes, then 0. So **prefer metadata.duration or actual video length** for the timeline scale.
 - **Scale**: `pxPerSec = timelineWidthPx / Math.max(durationSec, 1)`.
 
 ### 16.2 Segment position and size (per node)
@@ -612,7 +612,7 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
 
 - Each row has a label “Level 0”, “Level 1”, … (or “Level N”).
 - For each node in `nodesByLevel[level]`, draw a segment (e.g. `<div>` or `<button>`) at `leftPx`, `widthPx`.
-- **Overlapping segments**: If two segments at the same level overlap in time, **draw them overlapping** (no merging). Show a **warning** (e.g. banner or small notice) when overlapping segments are detected so the user is aware.
+- **Overlapping segments**: If two segments at the same level overlap in time, **draw them overlapping** (no merging). When building or rendering the timeline, detect overlaps per level (two segments overlap if `a.start < b.end && b.start < a.end`); if any exist, show a **warning** (e.g. banner or small notice) so the user is aware.
 - **Highlight**: if node is in `activeNodes` (nodes at current time), apply a CSS class (e.g. `.timeline-segment--active`) for different background/border.
 - **Tooltip/label**: show focused annotation (truncated) on hover or as inline text; empty → “(no label)”.
 - **Click**: `video.currentTime = node.start` (and optionally `video.play()`).
@@ -634,7 +634,7 @@ Use the path from §13.4 for focusId. If result is null/undefined/'', return "(n
 - **`timeupdate`**: Read `video.currentTime`. Then:
   1. Compute `activeNodes` = nodes at current time (§15.3).
   2. Update timeline: set/remove “active” class on segments that are in `activeNodes`.
-  3. Update “Nodes at current time” block: path from root to finest active node, and full focused annotation text; update “Details” target if needed.
+  3. Update “Nodes at current time” block: for **each** active node, show path from root to that node and full focused annotation text; update “Details” target(s) if needed.
   4. If transcript is SRT: find current cue; highlight that cue and scroll transcript so the cue is in view.
 - **`loadedmetadata`** (or when JSON is loaded): Set `durationSec` from **metadata.duration** or **video duration** (when available), else max(node.end). Build `nodesByLevel` and `nodeById`. Initial render of timeline and metadata/transcript.
 
@@ -683,7 +683,7 @@ The **visualizer has no Python dependency**. It only loads two files: **annotati
 If the source data is parquet (e.g. in `./dataset/data/*.parquet`), an **optional** Python script can produce one JSON per video:
 
 - **Input**: Parquet files from the dataset’s **`data/`** folder (e.g. `dataset/data/part-*.parquet` when `dataset` is a symlink to something like `action100m-preview`). Optionally restrict by `video_uid` or a directory of local MP4s.
-- **Output**: One `.json` file per video with shape = `VideoRecord` (§13). Optional: set `video_src` to relative path to MP4 (e.g. `videos/<video_uid>.mp4`).
+- **Output**: One `.json` file per video with shape = `VideoRecord` (§13). The visualizer expects exactly this schema; any parquet/API field or naming differences should be resolved in the data-prep script so the app receives the §13 shape. Optional: set `video_src` to relative path to MP4 (e.g. `videos/<video_uid>.mp4`).
 - **Parquet structure**: Rows have columns `video_uid`, `metadata`, `nodes`. Arrow may return nested/list values; normalize to a flat list of node dicts (see Action100M `scripts/download_action100m_for_via.py`: it reads these columns and writes `raw_annotations/000N_<video_uid>/action100m_raw.json` with `{ "video_uid", "metadata", "nodes" }`). So either:
   - Run that script and use its **raw_annotations** JSONs as the visualizer input (user opens `raw_annotations/0001_<uid>/action100m_raw.json` + the corresponding video from `videos/`), or
   - Add a small script that reads `dataset/data/*.parquet` and writes one JSON per video into a folder the visualizer can point at.
@@ -697,7 +697,7 @@ Use this order when generating or implementing the app.
 
 1. **HTML shell**
    - [ ] `index.html`: top bar (Open JSON, Open video, Annotation dropdown, video title/uid); video element; current time display; timeline container (empty); “Nodes at current time” container; metadata container (title, description, transcript); modal (hidden) for node JSON.
-   - [ ] Script tags: load `js/data.js`, `js/srt.js`, `js/timeline.js`, `js/nodes-panel.js`, `js/metadata.js`, `js/modal.js`, `js/app.js` (last).
+   - [ ] Script tags: load `js/data.js`, `js/srt.js`, `js/timeline.js`, `js/nodes-panel.js`, `js/metadata.js`, `js/modal.js`, `js/app.js` (last so all dependencies are available; only `app.js` runs at load, others export functions).
 
 2. **Data layer (`data.js`)**
    - [ ] Parse/generate `nodesByLevel` and `nodeById` from `nodes`.
@@ -717,9 +717,9 @@ Use this order when generating or implementing the app.
    - [ ] Level cap: optional maxLevel; only render levels 0..maxLevel; scrollable container.
 
 5. **Nodes-at-current-time panel (`nodes-panel.js`)**
-   - [ ] `renderNodesPanel(container, activeNodes, pathToFinest, focusId, nodeById, getNodeLabel, onDetailsClick)`.
-   - [ ] Breadcrumb: path labels joined by “ → ”.
-   - [ ] Detail: [start–end] and full focused annotation for finest node; “Details” / “{ }” button → onDetailsClick(node).
+   - [ ] `renderNodesPanel(container, activeNodes, focusId, nodeById, getNodeLabel, onDetailsClick)` (for each active node, compute path via getPathToRoot and render breadcrumb + detail).
+   - [ ] Breadcrumb: for each active node, path labels joined by “ → ”.
+   - [ ] Detail: for each active node, [start–end] and full focused annotation; “Details” / “{ }” button → onDetailsClick(node).
 
 6. **Metadata and transcript (`metadata.js`)**
    - [ ] Render title, description.
@@ -734,7 +734,7 @@ Use this order when generating or implementing the app.
    - [ ] File input “Open JSON”: read file, parse, set videoRecord; build nodesByLevel, nodeById; set durationSec; render timeline, nodes panel, metadata; if video_src set and is URL, set video.src.
    - [ ] File input “Open video”: create object URL, set video.src.
    - [ ] Annotation dropdown: on change set focusId; re-render timeline and nodes panel.
-   - [ ] Video element: on `timeupdate` (throttled) set currentTime; compute activeNodes and path; re-render timeline (active state), nodes panel, transcript highlight/scroll.
+   - [ ] Video element: on `timeupdate` (throttled) set currentTime; compute activeNodes (and for each, path via getPathToRoot); re-render timeline (active state), nodes panel, transcript highlight/scroll.
    - [ ] Timeline segment click: set video.currentTime = node.start.
    - [ ] Transcript cue click: set video.currentTime = cue.startSec.
    - [ ] Wire “Details” to openNodeModal(node).
