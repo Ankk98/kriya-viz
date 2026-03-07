@@ -15,7 +15,7 @@
 
   var state = {
     videoRecord: null,
-    focusId: 'gpt.summary.brief',
+    focusId: 'gpt.action.brief',
     currentTime: 0,
     durationSec: 0,
     nodesByLevel: null,
@@ -39,11 +39,8 @@
   var inputVideo = document.getElementById('input-video');
   var annotationFocus = document.getElementById('annotation-focus');
   var videoLabel = document.getElementById('video-label');
-  var currentTimeEl = document.getElementById('current-time');
-  var durationEl = document.getElementById('duration');
   var timelineContainer = document.getElementById('timeline-container');
   var timelineEmpty = document.getElementById('timeline-empty');
-  var timelineSeekBar = document.getElementById('timeline-seek-bar');
   var timelineOverlapWarning = document.getElementById('timeline-overlap-warning');
   var nodesPanel = document.getElementById('nodes-panel');
   var nodesTimeEl = document.getElementById('nodes-time');
@@ -118,16 +115,12 @@
     var title = meta.title || record.video_uid || '—';
     videoLabel.textContent = 'Video: ' + (title || '—');
 
-    // Time display
-    durationEl.textContent = formatTime(state.durationSec);
-    currentTimeEl.textContent = formatTime(state.currentTime);
     nodesTimeEl.textContent = '(' + formatTime(state.currentTime) + ')';
 
     // Timeline
     if (!state.nodesByLevel || !state.nodesByLevel.size || state.durationSec <= 0) {
       timelineEmpty.hidden = false;
       timelineContainer.innerHTML = '';
-      timelineSeekBar.style.display = 'none';
       timelineOverlapWarning.hidden = true;
     } else {
       timelineEmpty.hidden = true;
@@ -143,7 +136,6 @@
         onSegmentDetails: onSegmentDetails,
         getNodeLabel: getNodeLabel
       });
-      Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, timelineW);
       var hasOverlap = Action100MData.hasOverlappingSegments(state.nodesByLevel);
       timelineOverlapWarning.hidden = !hasOverlap;
     }
@@ -188,7 +180,6 @@
     if (now - lastTimeupdate < timeupdateThrottleMs) return;
     lastTimeupdate = now;
 
-    currentTimeEl.textContent = formatTime(state.currentTime);
     nodesTimeEl.textContent = '(' + formatTime(state.currentTime) + ')';
 
     var nodes = state.videoRecord && state.videoRecord.nodes ? state.videoRecord.nodes : [];
@@ -196,7 +187,6 @@
     var activeIds = activeNodes.map(function (n) { return n.node_id; });
 
     Timeline.updateTimelineActiveState(timelineContainer, activeIds);
-    Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, getTimelineWidthPx());
     NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
 
     if (state.transcriptCues && state.transcriptCues.length > 0 && transcriptCurrentLineEl) {
@@ -300,7 +290,7 @@
     }
   }
   annotationFocus.addEventListener('change', function () {
-    state.focusId = annotationFocus.value || 'gpt.summary.brief';
+    state.focusId = annotationFocus.value || 'gpt.action.brief';
     renderAll();
   });
 
@@ -337,7 +327,6 @@
     var d = videoEl.duration;
     if (typeof d === 'number' && !Number.isNaN(d) && d > 0) {
       state.durationSec = d;
-      durationEl.textContent = formatTime(d);
     }
   });
 
@@ -361,7 +350,6 @@
           onSegmentDetails: onSegmentDetails,
           getNodeLabel: getNodeLabel
         });
-        Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, timelineW);
       }
     }, 150);
   });

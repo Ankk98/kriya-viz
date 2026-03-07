@@ -42,33 +42,36 @@
       var end = Number(node.end);
       var timeStr = (Number.isNaN(start) ? '?' : formatTime(start)) + ' – ' + (Number.isNaN(end) ? '?' : formatTime(end));
       var label = getNodeLabel(node, focusId);
+      var noGpt = Action100MData && !Action100MData.hasGptAnnotation(node);
 
       var block = document.createElement('div');
-      block.className = 'nodes-block';
-
-      var crumbEl = document.createElement('div');
-      crumbEl.className = 'nodes-breadcrumb';
-      crumbEl.textContent = breadcrumb || '(root)';
-      block.appendChild(crumbEl);
-
-      var metaEl = document.createElement('div');
-      metaEl.className = 'nodes-meta';
-      metaEl.textContent = (node.node_id || '') + ' [' + timeStr + ']';
-      block.appendChild(metaEl);
+      block.className = 'nodes-block' + (noGpt ? ' nodes-block--no-gpt' : '');
 
       var textEl = document.createElement('div');
       textEl.className = 'nodes-detail-text';
       textEl.textContent = label;
       block.appendChild(textEl);
 
-    var detailsBtn = document.createElement('button');
-    detailsBtn.type = 'button';
-    detailsBtn.className = 'nodes-details-btn';
-    detailsBtn.textContent = 'Details';
-    detailsBtn.addEventListener('click', (function (n) {
-      return function () { if (onDetailsClick) onDetailsClick(n); };
-    })(node));
-      block.appendChild(detailsBtn);
+      var crumbEl = document.createElement('div');
+      crumbEl.className = 'nodes-breadcrumb';
+      crumbEl.textContent = breadcrumb || '(root)';
+      block.appendChild(crumbEl);
+
+      var metaRow = document.createElement('div');
+      metaRow.className = 'nodes-meta-row';
+      var metaEl = document.createElement('span');
+      metaEl.className = 'nodes-meta';
+      metaEl.textContent = (node.node_id || '') + ' [' + timeStr + ']';
+      metaRow.appendChild(metaEl);
+      var detailsBtn = document.createElement('button');
+      detailsBtn.type = 'button';
+      detailsBtn.className = 'nodes-details-btn';
+      detailsBtn.textContent = 'Details';
+      detailsBtn.addEventListener('click', (function (n) {
+        return function () { if (onDetailsClick) onDetailsClick(n); };
+      })(node));
+      metaRow.appendChild(detailsBtn);
+      block.appendChild(metaRow);
 
       wrap.appendChild(block);
     }

@@ -40,9 +40,6 @@
             Your browser does not support the video tag.
           </video>
         </div>
-        <div class="time-display">
-          <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-        </div>
         <div class="transcript-current-line" id="transcript-current-line" aria-live="polite"></div>
       </section>
 
@@ -55,9 +52,9 @@
     </div>
 
     <section class="timeline-section">
-      <h2 class="section-title">Timeline</h2>
-      <div class="timeline-controls">
-        <label>
+      <div class="timeline-header">
+        <h2 class="section-title">Timeline</h2>
+        <label class="timeline-controls">
           Max level:
           <select id="max-level" aria-label="Max level">
             <option value="">All</option>
@@ -73,7 +70,6 @@
         <div class="timeline-empty" id="timeline-empty">Load a JSON file to see the timeline.</div>
         <div id="timeline-container" class="timeline-container"></div>
       </div>
-      <div id="timeline-seek-bar" class="timeline-seek-bar" aria-hidden="true"></div>
       <div id="timeline-overlap-warning" class="timeline-overlap-warning" hidden>
         Some segments at the same level overlap in time.
       </div>

@@ -90,9 +90,10 @@
       return !Number.isNaN(start) && !Number.isNaN(end) && n.start <= t && t < n.end;
     });
     active.sort(function (a, b) {
-      var da = (Number(b.end) - Number(b.start)) || 0;
-      var db = (Number(a.end) - Number(a.start)) || 0;
-      return da - db;
+      var levelA = Number(a.level) || 0;
+      var levelB = Number(b.level) || 0;
+      if (levelB !== levelA) return levelB - levelA;
+      return (Number(a.start) || 0) - (Number(b.start) || 0);
     });
     return active;
   }
@@ -119,6 +120,14 @@
     if (text === null || text === undefined) text = '';
     text = String(text).trim();
     return text === '' ? '(no label)' : text;
+  }
+
+  /**
+   * True if node has GPT annotation (node.gpt is a non-null object).
+   * Nodes without GPT are typically ignored and often under 4 seconds.
+   */
+  function hasGptAnnotation(node) {
+    return !!(node && node.gpt && typeof node.gpt === 'object');
   }
 
   /**
@@ -154,6 +163,7 @@
     getPathToRoot: getPathToRoot,
     getNodeLabel: getNodeLabel,
     getAnnotationValue: getAnnotationValue,
+    hasGptAnnotation: hasGptAnnotation,
     hasOverlappingSegments: hasOverlappingSegments
   };
 })(typeof window !== 'undefined' ? window : this);

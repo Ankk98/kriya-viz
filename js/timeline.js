@@ -59,10 +59,11 @@
         var leftPx = Math.max(0, start * pxPerSec);
         var widthPx = Math.max(2, (end - start) * pxPerSec);
         var isActive = activeSet.has(String(node.node_id));
+        var noGpt = Action100MData && !Action100MData.hasGptAnnotation(node);
 
         var seg = document.createElement('button');
         seg.type = 'button';
-        seg.className = 'timeline-segment' + (isActive ? ' timeline-segment--active' : '');
+        seg.className = 'timeline-segment' + (isActive ? ' timeline-segment--active' : '') + (noGpt ? ' timeline-segment--no-gpt' : '');
         seg.style.left = leftPx + 'px';
         seg.style.width = widthPx + 'px';
         seg.title = getNodeLabel(node, focusId);
@@ -117,28 +118,8 @@
     }
   }
 
-  /**
-   * Render seek bar (position indicator) below timeline.
-   */
-  function renderSeekBar(container, currentTime, durationSec, timelineWidthPx) {
-    if (!container) return;
-    var duration = Math.max(Number(durationSec) || 0, 1);
-    var t = Math.max(0, Math.min(Number(currentTime) || 0, duration));
-    var leftPx = (t / duration) * (timelineWidthPx || 800);
-    container.style.width = (timelineWidthPx || 800) + 'px';
-    container.style.display = 'block';
-    var needle = container.querySelector('.timeline-seek-needle');
-    if (!needle) {
-      needle = document.createElement('div');
-      needle.className = 'timeline-seek-needle';
-      container.appendChild(needle);
-    }
-    needle.style.left = leftPx + 'px';
-  }
-
   global.Timeline = {
     renderTimeline: renderTimeline,
-    updateTimelineActiveState: updateTimelineActiveState,
-    renderSeekBar: renderSeekBar
+    updateTimelineActiveState: updateTimelineActiveState
   };
 })(typeof window !== 'undefined' ? window : this);
