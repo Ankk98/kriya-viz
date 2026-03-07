@@ -104,7 +104,7 @@
     state.transcriptCues = null;
     state.transcriptPlain = null;
     var meta = record.metadata || {};
-    var transcript = meta.transcript;
+    var transcript = meta.transcript != null ? meta.transcript : record.transcript;
     if (typeof transcript === 'string' && transcript.trim()) {
       var cues = Srt.parseSrt(transcript);
       if (cues.length >= 1) {
@@ -112,6 +112,24 @@
       } else {
         state.transcriptPlain = transcript;
       }
+    } else if (Array.isArray(transcript) && transcript.length > 0) {
+      // Array of { time, text } or { start, end, text } (e.g. Action100M raw_annotations)
+      var cues = [];
+      for (var i = 0; i < transcript.length; i++) {
+        var seg = transcript[i];
+        var text = seg && (seg.text != null) ? String(seg.text) : '';
+        var startSec = Number(seg && (seg.start != null ? seg.start : seg.time));
+        if (Number.isNaN(startSec) && seg && seg.time != null) startSec = Number(seg.time);
+        if (Number.isNaN(startSec)) startSec = 0;
+        var endSec = seg && (seg.end != null) ? Number(seg.end) : NaN;
+        if (Number.isNaN(endSec) && i + 1 < transcript.length && transcript[i + 1] != null) {
+          var nextStart = transcript[i + 1].start != null ? transcript[i + 1].start : transcript[i + 1].time;
+          endSec = Number(nextStart);
+        }
+        if (Number.isNaN(endSec) || endSec <= startSec) endSec = startSec + 1;
+        cues.push({ index: i + 1, startSec: startSec, endSec: endSec, text: text });
+      }
+      if (cues.length >= 1) state.transcriptCues = cues;
     }
     var dur = meta.duration;
     if (typeof dur === 'number' && !Number.isNaN(dur) && dur > 0) {
@@ -177,7 +195,8 @@
     if (state.transcriptCues && state.transcriptCues.length > 0) {
       var currentCue = Srt.getCurrentCue(state.transcriptCues, state.currentTime);
       if (transcriptCurrentLineEl && currentCue) {
-        transcriptCurrentLineEl.textContent = currentCue.text || '';
+        var ts = '[' + formatTime(currentCue.startSec) + '] ';
+        transcriptCurrentLineEl.textContent = ts + (currentCue.text || '').trim();
       }
     } else if (state.transcriptPlain != null && state.transcriptPlain.trim() !== '') {
       if (btnTranscript) btnTranscript.hidden = false;
@@ -256,7 +275,12 @@
 
     if (state.transcriptCues && state.transcriptCues.length > 0 && transcriptCurrentLineEl) {
       var currentCue = Srt.getCurrentCue(state.transcriptCues, state.currentTime);
-      transcriptCurrentLineEl.textContent = currentCue ? (currentCue.text || '') : '';
+      if (currentCue) {
+        var ts = '[' + formatTime(currentCue.startSec) + '] ';
+        transcriptCurrentLineEl.textContent = ts + (currentCue.text || '').trim();
+      } else {
+        transcriptCurrentLineEl.textContent = '';
+      }
     }
   }
 
