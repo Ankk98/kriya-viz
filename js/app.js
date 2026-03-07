@@ -15,7 +15,8 @@
 
   var state = {
     videoRecord: null,
-    focusId: 'gpt.action.brief',
+    timelineFocusId: 'gpt.action.brief',
+    nodesFocusId: 'gpt.summary.brief',
     currentTime: 0,
     durationSec: 0,
     nodesByLevel: null,
@@ -54,7 +55,8 @@
   var videoEl = document.getElementById('video');
   var inputJson = document.getElementById('input-json');
   var inputVideo = document.getElementById('input-video');
-  var annotationFocus = document.getElementById('annotation-focus');
+  var nodesAnnotationEl = document.getElementById('nodes-annotation');
+  var timelineAnnotationEl = document.getElementById('timeline-annotation');
   var videoLabel = document.getElementById('video-label');
   var timelineContainer = document.getElementById('timeline-container');
   var timelineEmpty = document.getElementById('timeline-empty');
@@ -70,6 +72,9 @@
   var transcriptModal = document.getElementById('transcript-modal');
   var transcriptModalBody = document.getElementById('transcript-modal-body');
   var transcriptModalClose = document.getElementById('transcript-modal-close');
+  var pathModal = document.getElementById('path-modal');
+  var pathModalBody = document.getElementById('path-modal-body');
+  var pathModalClose = document.getElementById('path-modal-close');
   var maxLevelSelect = document.getElementById('max-level');
 
   function formatTime(sec) {
@@ -147,7 +152,7 @@
       if (maxLevel === '') maxLevel = null;
       var timelineW = getTimelineWidthPx();
       var secInView = getSecondsInView();
-      Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
+      Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.timelineFocusId, activeIds, state.nodeById, {
         timelineWidthPx: timelineW,
         secondsInView: secInView,
         maxLevel: maxLevel,
@@ -162,7 +167,7 @@
 
     // Nodes at current time
     var activeNodes = Action100MData.getNodesAtTime(nodes, state.currentTime);
-    NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
+    NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.nodesFocusId, state.nodeById, getNodeLabel, onSegmentDetails, openPathModal);
 
     // Transcript: one line when SRT, or "Transcript" button (popup) when plain
     if (transcriptCurrentLineEl) {
@@ -194,6 +199,44 @@
     if (NodeModal) NodeModal.openNodeModal(node);
   }
 
+  function openPathModal(node) {
+    if (!pathModalBody) return;
+    pathModalBody.innerHTML = '';
+    var getPathToRoot = Action100MData && Action100MData.getPathToRoot;
+    if (!getPathToRoot) {
+      pathModalBody.textContent = 'Path not available.';
+    } else {
+      var path = getPathToRoot(state.nodeById, node);
+      if (!path || path.length === 0) {
+        pathModalBody.textContent = '(root)';
+      } else {
+        for (var i = 0; i < path.length; i++) {
+          var step = document.createElement('div');
+          step.className = 'path-modal-step';
+          step.textContent = getNodeLabel(path[i], state.nodesFocusId);
+          pathModalBody.appendChild(step);
+          if (i < path.length - 1) {
+            var arrow = document.createElement('div');
+            arrow.className = 'path-modal-arrow';
+            arrow.textContent = '↓';
+            pathModalBody.appendChild(arrow);
+          }
+        }
+      }
+    }
+    if (pathModal) {
+      pathModal.hidden = false;
+      pathModal.removeAttribute('aria-hidden');
+    }
+  }
+
+  function closePathModal() {
+    if (pathModal) {
+      pathModal.hidden = true;
+      pathModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   function onTimeupdate() {
     if (!videoEl) return;
     state.currentTime = videoEl.currentTime;
@@ -208,7 +251,7 @@
     var activeIds = activeNodes.map(function (n) { return n.node_id; });
 
     Timeline.updateTimelineActiveState(timelineContainer, activeIds);
-    NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
+    NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.nodesFocusId, state.nodeById, getNodeLabel, onSegmentDetails, openPathModal);
     scrollTimelineToCurrentTime();
 
     if (state.transcriptCues && state.transcriptCues.length > 0 && transcriptCurrentLineEl) {
@@ -300,21 +343,33 @@
     videoEl.src = URL.createObjectURL(file);
   });
 
-  // ——— Annotation dropdown ———
-  if (Action100MData && Action100MData.ANNOTATION_OPTIONS) {
+  // ——— Annotation dropdowns (per section) ———
+  function populateAnnotationSelect(selectEl, selectedId) {
+    if (!selectEl || !Action100MData || !Action100MData.ANNOTATION_OPTIONS) return;
+    selectEl.innerHTML = '';
     var opts = Action100MData.ANNOTATION_OPTIONS;
     for (var i = 0; i < opts.length; i++) {
       var opt = document.createElement('option');
       opt.value = opts[i].id;
       opt.textContent = opts[i].label;
-      if (opts[i].id === state.focusId) opt.selected = true;
-      annotationFocus.appendChild(opt);
+      if (opts[i].id === selectedId) opt.selected = true;
+      selectEl.appendChild(opt);
     }
   }
-  annotationFocus.addEventListener('change', function () {
-    state.focusId = annotationFocus.value || 'gpt.action.brief';
-    renderAll();
-  });
+  populateAnnotationSelect(nodesAnnotationEl, state.nodesFocusId);
+  populateAnnotationSelect(timelineAnnotationEl, state.timelineFocusId);
+  if (nodesAnnotationEl) {
+    nodesAnnotationEl.addEventListener('change', function () {
+      state.nodesFocusId = nodesAnnotationEl.value || 'gpt.summary.brief';
+      renderAll();
+    });
+  }
+  if (timelineAnnotationEl) {
+    timelineAnnotationEl.addEventListener('change', function () {
+      state.timelineFocusId = timelineAnnotationEl.value || 'gpt.action.brief';
+      renderAll();
+    });
+  }
 
   maxLevelSelect.addEventListener('change', function () {
     renderAll();
@@ -335,10 +390,16 @@
     var transcriptBackdrop = transcriptModal.querySelector('.modal-backdrop');
     if (transcriptBackdrop) transcriptBackdrop.addEventListener('click', closeTranscriptModal);
   }
+  if (pathModalClose) pathModalClose.addEventListener('click', closePathModal);
+  if (pathModal) {
+    var pathBackdrop = pathModal.querySelector('.modal-backdrop');
+    if (pathBackdrop) pathBackdrop.addEventListener('click', closePathModal);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (metadataModal && !metadataModal.hidden) closeMetadataModal();
       else if (transcriptModal && !transcriptModal.hidden) closeTranscriptModal();
+      else if (pathModal && !pathModal.hidden) closePathModal();
     }
   });
 
@@ -369,7 +430,7 @@
         if (maxLevel === '') maxLevel = null;
         var timelineW = getTimelineWidthPx();
         var secInView = getSecondsInView();
-        Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
+        Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.timelineFocusId, activeIds, state.nodeById, {
           timelineWidthPx: timelineW,
           secondsInView: secInView,
           maxLevel: maxLevel,

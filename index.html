@@ -20,13 +20,6 @@
         <input type="file" id="input-video" accept="video/*" hidden>
       </label>
       <span class="top-bar-sep">|</span>
-      <label class="annotation-label">
-        Annotation:
-        <select id="annotation-focus" aria-label="Annotation type">
-          <!-- Populated by app.js from ANNOTATION_OPTIONS -->
-        </select>
-      </label>
-      <span class="top-bar-sep">|</span>
       <span id="video-label" class="video-label">Video: —</span>
       <span class="top-bar-sep">|</span>
       <button type="button" class="text-btn" id="btn-metadata">Metadata</button>
@@ -46,7 +39,15 @@
       </section>
 
       <section class="nodes-panel-section">
-        <h2 class="section-title">Nodes at current time <span id="nodes-time" class="nodes-time">(0:00)</span></h2>
+        <div class="nodes-panel-header">
+          <h2 class="section-title">Nodes at current time <span id="nodes-time" class="nodes-time">(0:00)</span></h2>
+          <label class="section-controls">
+            Annotation:
+            <select id="nodes-annotation" aria-label="Annotation type for nodes">
+              <!-- Populated by app.js -->
+            </select>
+          </label>
+        </div>
         <div id="nodes-panel" class="nodes-panel">
           <div class="nodes-empty" id="nodes-empty">Load JSON and play video to see active nodes.</div>
         </div>
@@ -56,21 +57,29 @@
     <section class="timeline-section">
       <div class="timeline-header">
         <h2 class="section-title">Timeline</h2>
-        <label class="timeline-controls">
-          Max level:
-          <select id="max-level" aria-label="Max level">
-            <option value="">All</option>
-            <option value="2">0–2</option>
-            <option value="3">0–3</option>
-            <option value="4">0–4</option>
-            <option value="5">0–5</option>
-            <option value="10">0–10</option>
-          </select>
-        </label>
-        <label class="timeline-controls" title="How many seconds of video fit in the visible timeline width">
-          Sec in view:
-          <input type="number" id="timeline-sec-in-view" min="5" step="1" value="30" aria-label="Seconds in view">
-        </label>
+        <div class="timeline-header-controls">
+          <label class="timeline-controls">
+            Annotation:
+            <select id="timeline-annotation" aria-label="Annotation type for timeline">
+              <!-- Populated by app.js -->
+            </select>
+          </label>
+          <label class="timeline-controls" title="How many seconds of video fit in the visible timeline width">
+            Sec in view:
+            <input type="number" id="timeline-sec-in-view" min="5" step="1" value="30" aria-label="Seconds in view">
+          </label>
+          <label class="timeline-controls">
+            Max level:
+            <select id="max-level" aria-label="Max level">
+              <option value="">All</option>
+              <option value="2">0–2</option>
+              <option value="3">0–3</option>
+              <option value="4">0–4</option>
+              <option value="5">0–5</option>
+              <option value="10">0–10</option>
+            </select>
+          </label>
+        </div>
       </div>
       <div class="timeline-wrapper">
         <div class="timeline-empty" id="timeline-empty">Load a JSON file to see the timeline.</div>
@@ -115,6 +124,17 @@
         <button type="button" class="modal-close" id="transcript-modal-close" aria-label="Close">&times;</button>
       </div>
       <div id="transcript-modal-body" class="modal-body transcript-plain"></div>
+    </div>
+  </div>
+
+  <div id="path-modal" class="modal" role="dialog" aria-labelledby="path-modal-title" aria-modal="true" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="path-modal-title">Node path</h2>
+        <button type="button" class="modal-close" id="path-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div id="path-modal-body" class="modal-body path-modal-body"></div>
     </div>
   </div>
 
