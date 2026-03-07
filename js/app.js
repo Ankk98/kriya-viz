@@ -24,9 +24,15 @@
     transcriptPlain: null
   };
 
-  var TIMELINE_WIDTH_PX = 800;
   var timeupdateThrottleMs = 150;
   var lastTimeupdate = 0;
+
+  function getTimelineWidthPx() {
+    if (!timelineContainer) return 800;
+    var containerWidth = timelineContainer.clientWidth;
+    var labelAndPadding = 90;
+    return Math.max(200, containerWidth - labelAndPadding);
+  }
 
   var videoEl = document.getElementById('video');
   var inputJson = document.getElementById('input-json');
@@ -41,8 +47,15 @@
   var timelineOverlapWarning = document.getElementById('timeline-overlap-warning');
   var nodesPanel = document.getElementById('nodes-panel');
   var nodesTimeEl = document.getElementById('nodes-time');
-  var metadataPanel = document.getElementById('metadata-panel');
-  var transcriptPanel = document.getElementById('transcript-panel');
+  var transcriptCurrentLineEl = document.getElementById('transcript-current-line');
+  var btnMetadata = document.getElementById('btn-metadata');
+  var btnTranscript = document.getElementById('btn-transcript');
+  var metadataModal = document.getElementById('metadata-modal');
+  var metadataModalBody = document.getElementById('metadata-modal-body');
+  var metadataModalClose = document.getElementById('metadata-modal-close');
+  var transcriptModal = document.getElementById('transcript-modal');
+  var transcriptModalBody = document.getElementById('transcript-modal-body');
+  var transcriptModalClose = document.getElementById('transcript-modal-close');
   var maxLevelSelect = document.getElementById('max-level');
 
   function formatTime(sec) {
@@ -122,14 +135,15 @@
       var activeIds = activeNodes.map(function (n) { return n.node_id; });
       var maxLevel = maxLevelSelect.value || null;
       if (maxLevel === '') maxLevel = null;
+      var timelineW = getTimelineWidthPx();
       Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
-        timelineWidthPx: TIMELINE_WIDTH_PX,
+        timelineWidthPx: timelineW,
         maxLevel: maxLevel,
         onSegmentClick: onSegmentClick,
         onSegmentDetails: onSegmentDetails,
         getNodeLabel: getNodeLabel
       });
-      Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, TIMELINE_WIDTH_PX);
+      Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, timelineW);
       var hasOverlap = Action100MData.hasOverlappingSegments(state.nodesByLevel);
       timelineOverlapWarning.hidden = !hasOverlap;
     }
@@ -138,30 +152,18 @@
     var activeNodes = Action100MData.getNodesAtTime(nodes, state.currentTime);
     NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
 
-    // Metadata & transcript
+    // Transcript: one line when SRT, or "Transcript" button (popup) when plain
+    if (transcriptCurrentLineEl) {
+      transcriptCurrentLineEl.textContent = '';
+    }
+    if (btnTranscript) btnTranscript.hidden = true;
     if (state.transcriptCues && state.transcriptCues.length > 0) {
-      Metadata.renderMetadata(metadataPanel, transcriptPanel, meta, state.transcriptCues, {
-        currentTime: state.currentTime,
-        onCueClick: function (startSec) {
-          if (videoEl) {
-            videoEl.currentTime = startSec;
-            state.currentTime = startSec;
-            onTimeupdate();
-          }
-        }
-      });
       var currentCue = Srt.getCurrentCue(state.transcriptCues, state.currentTime);
-      Metadata.updateTranscriptHighlight(transcriptPanel, currentCue);
-    } else if (state.transcriptPlain != null) {
-      Metadata.renderMetadata(metadataPanel, transcriptPanel, meta, [], {});
-      Metadata.renderTranscriptPlain(transcriptPanel, state.transcriptPlain);
-    } else {
-      Metadata.renderMetadata(metadataPanel, transcriptPanel, meta, [], {});
-      var emptyT = transcriptPanel.querySelector('.transcript-empty');
-      if (emptyT) {
-        emptyT.textContent = 'No transcript.';
-        emptyT.hidden = false;
+      if (transcriptCurrentLineEl && currentCue) {
+        transcriptCurrentLineEl.textContent = currentCue.text || '';
       }
+    } else if (state.transcriptPlain != null && state.transcriptPlain.trim() !== '') {
+      if (btnTranscript) btnTranscript.hidden = false;
     }
   }
 
@@ -194,12 +196,60 @@
     var activeIds = activeNodes.map(function (n) { return n.node_id; });
 
     Timeline.updateTimelineActiveState(timelineContainer, activeIds);
-    Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, TIMELINE_WIDTH_PX);
+    Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, getTimelineWidthPx());
     NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.focusId, state.nodeById, getNodeLabel, onSegmentDetails);
 
-    if (state.transcriptCues && state.transcriptCues.length > 0) {
+    if (state.transcriptCues && state.transcriptCues.length > 0 && transcriptCurrentLineEl) {
       var currentCue = Srt.getCurrentCue(state.transcriptCues, state.currentTime);
-      Metadata.updateTranscriptHighlight(transcriptPanel, currentCue);
+      transcriptCurrentLineEl.textContent = currentCue ? (currentCue.text || '') : '';
+    }
+  }
+
+  function openMetadataModal() {
+    var meta = state.videoRecord && state.videoRecord.metadata ? state.videoRecord.metadata : {};
+    var title = (meta.title != null && meta.title !== '') ? String(meta.title) : '';
+    var desc = (meta.description != null && meta.description !== '') ? String(meta.description) : '';
+    if (!metadataModalBody) return;
+    metadataModalBody.innerHTML = '';
+    if (title) {
+      var h = document.createElement('p');
+      h.className = 'metadata-title';
+      h.textContent = title;
+      metadataModalBody.appendChild(h);
+    }
+    if (desc) {
+      var d = document.createElement('p');
+      d.className = 'metadata-description';
+      d.textContent = desc;
+      metadataModalBody.appendChild(d);
+    }
+    if (!title && !desc) metadataModalBody.textContent = 'No title or description.';
+    if (metadataModal) {
+      metadataModal.hidden = false;
+      metadataModal.removeAttribute('aria-hidden');
+    }
+  }
+
+  function closeMetadataModal() {
+    if (metadataModal) {
+      metadataModal.hidden = true;
+      metadataModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function openTranscriptModal() {
+    if (!transcriptModalBody) return;
+    transcriptModalBody.textContent = state.transcriptPlain != null ? state.transcriptPlain : 'No transcript.';
+    if (transcriptModal) {
+      transcriptModal.hidden = false;
+      transcriptModal.removeAttribute('aria-hidden');
+    }
+  }
+
+  function closeTranscriptModal() {
+    if (transcriptModal) {
+      transcriptModal.hidden = true;
+      transcriptModal.setAttribute('aria-hidden', 'true');
     }
   }
 
@@ -258,6 +308,25 @@
     renderAll();
   });
 
+  if (btnMetadata) btnMetadata.addEventListener('click', openMetadataModal);
+  if (btnTranscript) btnTranscript.addEventListener('click', openTranscriptModal);
+  if (metadataModalClose) metadataModalClose.addEventListener('click', closeMetadataModal);
+  if (transcriptModalClose) transcriptModalClose.addEventListener('click', closeTranscriptModal);
+  if (metadataModal) {
+    var backdrop = metadataModal.querySelector('.modal-backdrop');
+    if (backdrop) backdrop.addEventListener('click', closeMetadataModal);
+  }
+  if (transcriptModal) {
+    var transcriptBackdrop = transcriptModal.querySelector('.modal-backdrop');
+    if (transcriptBackdrop) transcriptBackdrop.addEventListener('click', closeTranscriptModal);
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (metadataModal && !metadataModal.hidden) closeMetadataModal();
+      else if (transcriptModal && !transcriptModal.hidden) closeTranscriptModal();
+    }
+  });
+
   // ——— Video events ———
   videoEl.addEventListener('timeupdate', onTimeupdate);
   videoEl.addEventListener('loadedmetadata', onLoadedMetadata);
@@ -270,6 +339,31 @@
       state.durationSec = d;
       durationEl.textContent = formatTime(d);
     }
+  });
+
+  // ——— Resize: re-render timeline to use new width ———
+  var resizeThrottle;
+  window.addEventListener('resize', function () {
+    if (resizeThrottle) clearTimeout(resizeThrottle);
+    resizeThrottle = setTimeout(function () {
+      resizeThrottle = null;
+      if (state.videoRecord && state.nodesByLevel && state.nodesByLevel.size && state.durationSec > 0) {
+        var nodes = state.videoRecord.nodes || [];
+        var activeNodes = Action100MData.getNodesAtTime(nodes, state.currentTime);
+        var activeIds = activeNodes.map(function (n) { return n.node_id; });
+        var maxLevel = maxLevelSelect.value || null;
+        if (maxLevel === '') maxLevel = null;
+        var timelineW = getTimelineWidthPx();
+        Timeline.renderTimeline(timelineContainer, state.nodesByLevel, state.durationSec, state.focusId, activeIds, state.nodeById, {
+          timelineWidthPx: timelineW,
+          maxLevel: maxLevel,
+          onSegmentClick: onSegmentClick,
+          onSegmentDetails: onSegmentDetails,
+          getNodeLabel: getNodeLabel
+        });
+        Timeline.renderSeekBar(timelineSeekBar, state.currentTime, state.durationSec, timelineW);
+      }
+    }, 150);
   });
 
   // ——— Keyboard ———

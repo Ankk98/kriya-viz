@@ -86,11 +86,32 @@ body {
   font-size: 13px;
 }
 
+.text-btn {
+  padding: 0.35rem 0.5rem;
+  font-size: 13px;
+  background: transparent;
+  color: var(--accent);
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+
+.text-btn:hover {
+  background: rgba(77, 171, 247, 0.15);
+}
+
+.text-btn[hidden] {
+  display: none;
+}
+
 /* ——— Main ——— */
 .main {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 52px);
 }
 
 .section-title {
@@ -100,19 +121,30 @@ body {
   color: var(--text);
 }
 
-.subsection-title {
-  font-size: 0.9rem;
-  font-weight: 600;
-  margin: 1rem 0 0.5rem 0;
-  color: var(--text-muted);
+/* ——— Top row: video (50%) | nodes (50%), same height = half screen ——— */
+.top-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+  height: 50vh;
+  min-height: 280px;
+  align-items: stretch;
 }
 
-/* ——— Video ——— */
 .video-section {
-  margin-bottom: 1rem;
+  flex: 0 0 50%;
+  width: 50%;
+  max-width: 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .video-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
   background: #000;
   border-radius: var(--radius);
   overflow: hidden;
@@ -120,18 +152,87 @@ body {
 }
 
 .video-wrapper video {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
   display: block;
+  object-fit: contain;
 }
 
 .time-display {
   font-size: 12px;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
-/* ——— Timeline ——— */
+.transcript-current-line {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 1.4em;
+  flex-shrink: 0;
+}
+
+.transcript-current-line:empty::before {
+  content: '\00a0';
+}
+
+/* ——— Nodes panel (right of video, same height as video section) ——— */
+.nodes-panel-section {
+  flex: 0 0 50%;
+  width: 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.nodes-panel-section .section-title {
+  margin-bottom: 0.25rem;
+  flex-shrink: 0;
+}
+
+.nodes-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 768px) {
+  .top-row {
+    flex-direction: column;
+  }
+  .video-section,
+  .nodes-panel-section {
+    flex: 1 1 auto;
+    max-width: 100%;
+  }
+}
+
+/* ——— Timeline (bottom half) ——— */
 .timeline-section {
-  margin-bottom: 1rem;
+  flex: 1;
+  min-height: 50vh;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.timeline-section .section-title {
+  flex-shrink: 0;
+}
+
+.timeline-section .timeline-controls {
+  flex-shrink: 0;
 }
 
 .timeline-controls {
@@ -155,11 +256,13 @@ body {
 
 .timeline-wrapper {
   position: relative;
+  flex: 1;
   min-height: 220px;
 }
 
 .timeline-container {
-  height: 220px;
+  height: 100%;
+  min-height: 220px;
   overflow-y: auto;
   overflow-x: auto;
   background: var(--surface);
@@ -201,7 +304,7 @@ body {
   position: relative;
   height: 24px;
   flex: 1;
-  min-width: 400px;
+  min-width: 0;
 }
 
 .timeline-segment {
@@ -287,34 +390,9 @@ body {
   border-radius: var(--radius);
 }
 
-/* ——— Panels (nodes + metadata) ——— */
-.panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-@media (max-width: 768px) {
-  .panels {
-    grid-template-columns: 1fr;
-  }
-}
-
-.nodes-panel-section .section-title {
-  margin-bottom: 0.25rem;
-}
-
 .nodes-time {
   font-weight: normal;
   color: var(--text-muted);
-}
-
-.nodes-panel {
-  min-height: 120px;
-  padding: 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
 }
 
 .nodes-empty {
@@ -370,77 +448,24 @@ body {
   background: rgba(77, 171, 247, 0.15);
 }
 
-/* ——— Metadata & transcript ——— */
-.metadata-section {
-  min-width: 0;
-}
-
-.metadata-panel {
-  padding: 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  margin-bottom: 0.5rem;
-}
-
-.metadata-empty {
-  color: var(--text-muted);
+/* ——— Modal body (metadata / transcript popups) ——— */
+.modal-body {
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: 60vh;
   font-size: 13px;
+  color: var(--text);
 }
 
-.metadata-title {
+.modal-body .metadata-title {
   font-weight: 600;
-  margin: 0 0 0.35rem 0;
+  margin: 0 0 0.5rem 0;
 }
 
-.metadata-description {
+.modal-body .metadata-description {
   margin: 0;
-  font-size: 13px;
   color: var(--text-muted);
   white-space: pre-wrap;
-}
-
-.transcript-panel {
-  max-height: 280px;
-  overflow-y: auto;
-  padding: 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.transcript-empty {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.transcript-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.transcript-line {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 0.4rem 0.5rem;
-  font-size: 12px;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  color: var(--text);
-  cursor: pointer;
-  transition: background 0.1s;
-}
-
-.transcript-line:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.transcript-line--current {
-  background: var(--active-bg);
-  color: #fff;
 }
 
 .transcript-plain {

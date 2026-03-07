@@ -26,20 +26,33 @@
       </label>
       <span class="top-bar-sep">|</span>
       <span id="video-label" class="video-label">Video: —</span>
+      <span class="top-bar-sep">|</span>
+      <button type="button" class="text-btn" id="btn-metadata">Metadata</button>
+      <button type="button" class="text-btn" id="btn-transcript" hidden>Transcript</button>
     </div>
   </header>
 
   <main class="main">
-    <section class="video-section">
-      <div class="video-wrapper">
-        <video id="video" controls preload="metadata" crossorigin="anonymous">
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <div class="time-display">
-        <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-      </div>
-    </section>
+    <div class="top-row">
+      <section class="video-section">
+        <div class="video-wrapper">
+          <video id="video" controls preload="metadata" crossorigin="anonymous">
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        <div class="time-display">
+          <span id="current-time">0:00</span> / <span id="duration">0:00</span>
+        </div>
+        <div class="transcript-current-line" id="transcript-current-line" aria-live="polite"></div>
+      </section>
+
+      <section class="nodes-panel-section">
+        <h2 class="section-title">Nodes at current time <span id="nodes-time" class="nodes-time">(0:00)</span></h2>
+        <div id="nodes-panel" class="nodes-panel">
+          <div class="nodes-empty" id="nodes-empty">Load JSON and play video to see active nodes.</div>
+        </div>
+      </section>
+    </div>
 
     <section class="timeline-section">
       <h2 class="section-title">Timeline</h2>
@@ -65,26 +78,6 @@
         Some segments at the same level overlap in time.
       </div>
     </section>
-
-    <div class="panels">
-      <section class="nodes-panel-section">
-        <h2 class="section-title">Nodes at current time <span id="nodes-time" class="nodes-time">(0:00)</span></h2>
-        <div id="nodes-panel" class="nodes-panel">
-          <div class="nodes-empty" id="nodes-empty">Load JSON and play video to see active nodes.</div>
-        </div>
-      </section>
-
-      <section class="metadata-section">
-        <h2 class="section-title">Metadata</h2>
-        <div id="metadata-panel" class="metadata-panel">
-          <div class="metadata-empty" id="metadata-empty">Load a JSON file to see metadata.</div>
-        </div>
-        <h3 class="subsection-title">Transcript</h3>
-        <div id="transcript-panel" class="transcript-panel">
-          <div class="transcript-empty" id="transcript-empty">No transcript.</div>
-        </div>
-      </section>
-    </div>
   </main>
 
   <div id="node-modal" class="modal" role="dialog" aria-labelledby="modal-title" aria-modal="true" hidden>
@@ -98,6 +91,28 @@
       <div class="modal-actions">
         <button type="button" class="btn-copy" id="modal-copy">Copy JSON</button>
       </div>
+    </div>
+  </div>
+
+  <div id="metadata-modal" class="modal" role="dialog" aria-labelledby="metadata-modal-title" aria-modal="true" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="metadata-modal-title">Metadata</h2>
+        <button type="button" class="modal-close" id="metadata-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div id="metadata-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="transcript-modal" class="modal" role="dialog" aria-labelledby="transcript-modal-title" aria-modal="true" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="transcript-modal-title">Transcript</h2>
+        <button type="button" class="modal-close" id="transcript-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div id="transcript-modal-body" class="modal-body transcript-plain"></div>
     </div>
   </div>
 
