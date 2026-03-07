@@ -304,7 +304,7 @@ body {
 }
 
 .timeline-controls label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
@@ -314,7 +314,7 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: 13px;
   margin-left: 0.25rem;
 }
 
@@ -326,7 +326,7 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: 13px;
   margin-left: 0.25rem;
   box-sizing: border-box;
   -moz-appearance: textfield;
@@ -382,7 +382,7 @@ body {
 
 .timeline-row-label {
   flex: 0 0 70px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
   position: sticky;
   left: 0;
@@ -410,7 +410,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text);
   overflow: hidden;
   transition: background 0.1s, border-color 0.1s;
@@ -455,7 +455,7 @@ body {
   flex-shrink: 0;
   margin-left: 4px;
   padding: 0 4px;
-  font-size: 10px;
+  font-size: 13px;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -471,7 +471,7 @@ body {
 .timeline-overlap-warning {
   margin-top: 0.5rem;
   padding: 0.4rem 0.75rem;
-  font-size: 12px;
+  font-size: 13px;
   background: rgba(224, 49, 49, 0.15);
   color: var(--danger);
   border-radius: var(--radius);
