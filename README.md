@@ -1,6 +1,6 @@
 # Kriya Visualizer
 
-A **static, read-only** web visualizer for Action100M-style annotations: video plus a tree of temporal segments with multiple annotation fields. One screen: video, timeline (one row per level), nodes at current time, metadata, and transcript.
+A **static, read-only** web visualizer for Action100M-style annotations: video plus a tree of temporal segments with multiple annotation fields. One screen: video, timeline (one row per level), nodes at current time, metadata, and transcript. The name *Kriya* is a Sanskrit word meaning action or deed.
 
 ## Features
 

@@ -77,6 +77,9 @@
   var pathModal = document.getElementById('path-modal');
   var pathModalBody = document.getElementById('path-modal-body');
   var pathModalClose = document.getElementById('path-modal-close');
+  var btnAbout = document.getElementById('btn-about');
+  var aboutModal = document.getElementById('about-modal');
+  var aboutModalClose = document.getElementById('about-modal-close');
   var maxLevelSelect = document.getElementById('max-level');
   var listDrawer = document.getElementById('list-drawer');
   var listDrawerClose = document.getElementById('list-drawer-close');
@@ -394,6 +397,20 @@
     }
   }
 
+  function openAboutModal() {
+    if (aboutModal) {
+      aboutModal.hidden = false;
+      aboutModal.removeAttribute('aria-hidden');
+    }
+  }
+
+  function closeAboutModal() {
+    if (aboutModal) {
+      aboutModal.hidden = true;
+      aboutModal.setAttribute('aria-hidden', 'true');
+    }
+  }
+
   function openTranscriptModal() {
     if (!transcriptModalBody) return;
     transcriptModalBody.textContent = state.transcriptPlain != null ? state.transcriptPlain : 'No transcript.';
@@ -589,7 +606,9 @@
 
   if (btnMetadata) btnMetadata.addEventListener('click', openMetadataModal);
   if (btnTranscript) btnTranscript.addEventListener('click', openTranscriptModal);
+  if (btnAbout) btnAbout.addEventListener('click', openAboutModal);
   if (metadataModalClose) metadataModalClose.addEventListener('click', closeMetadataModal);
+  if (aboutModalClose) aboutModalClose.addEventListener('click', closeAboutModal);
   if (transcriptModalClose) transcriptModalClose.addEventListener('click', closeTranscriptModal);
   if (metadataModal) {
     var backdrop = metadataModal.querySelector('.modal-backdrop');
@@ -604,6 +623,10 @@
     var pathBackdrop = pathModal.querySelector('.modal-backdrop');
     if (pathBackdrop) pathBackdrop.addEventListener('click', closePathModal);
   }
+  if (aboutModal) {
+    var aboutBackdrop = aboutModal.querySelector('.modal-backdrop');
+    if (aboutBackdrop) aboutBackdrop.addEventListener('click', closeAboutModal);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (listDrawer && listDrawer.classList.contains('list-drawer--open')) closeListDrawer();
@@ -611,6 +634,7 @@
       else if (metadataModal && !metadataModal.hidden) closeMetadataModal();
       else if (transcriptModal && !transcriptModal.hidden) closeTranscriptModal();
       else if (pathModal && !pathModal.hidden) closePathModal();
+      else if (aboutModal && !aboutModal.hidden) closeAboutModal();
     }
   });
 

@@ -54,6 +54,42 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.top-bar-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.top-bar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.6rem;
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.top-bar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+}
+
+.top-bar-icon-btn .top-bar-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+a.top-bar-icon-btn {
+  text-decoration: none;
 }
 
 .top-bar-app-name {
@@ -664,6 +700,67 @@ body {
   margin: 0;
   color: var(--text-muted);
   white-space: pre-wrap;
+}
+
+/* ——— About modal ——— */
+.about-modal-body {
+  max-height: 70vh;
+}
+
+.about-modal-body .about-intro {
+  margin: 0 0 0.5rem 0;
+}
+
+.about-modal-body .about-name {
+  margin: 0 0 1rem 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.about-modal-body .about-heading {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: var(--text);
+}
+
+.about-modal-body .about-list {
+  margin: 0 0 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.about-modal-body .about-list li {
+  margin-bottom: 0.5rem;
+}
+
+.about-modal-body .about-note {
+  margin: 0.5rem 0 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.about-modal-body .about-footer {
+  margin: 1.25rem 0 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.about-modal-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.about-modal-body a:hover {
+  text-decoration: underline;
+}
+
+.about-modal-body code {
+  font-size: 12px;
+  background: var(--surface);
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
 }
 
 .transcript-plain {
