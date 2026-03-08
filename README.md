@@ -2,6 +2,8 @@
 
 A **static, read-only** web visualizer for Action100M-style annotations: video plus a tree of temporal segments with multiple annotation fields. One screen: video, timeline (one row per level), nodes at current time, metadata, and transcript. The name *Kriya* is a Sanskrit word meaning action or deed.
 
+**Try it:** [https://ankk98.github.io/kriya-viz/](https://ankk98.github.io/kriya-viz/)
+
 ## Features
 
 - **Two ways to load content**
@@ -74,6 +76,10 @@ kriya-viz/
 ├── LICENSE
 └── README.md
 ```
+
+## Contributing
+
+Contributions are welcome. Feel free to open an [issue](https://github.com/Ankk98/kriya-viz/issues) or a [pull request](https://github.com/Ankk98/kriya-viz/pulls).
 
 ## License
 
