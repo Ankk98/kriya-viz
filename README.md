@@ -1,8 +1,10 @@
 # Kriya Visualizer
 
-A **static, read-only** web visualizer for Action100M-style annotations: video plus a tree of temporal segments with multiple annotation fields. One screen: video, timeline (one row per level), nodes at current time, metadata, and transcript. The name *Kriya* is a Sanskrit word meaning action or deed.
+A **static, read-only** web visualizer for Action100M-style annotations: video plus a tree of temporal segments with multiple annotation fields. One screen: video, timeline (one row per level), nodes at current time, metadata, and transcript.
 
-**Try it:** [https://ankk98.github.io/kriya-viz/](https://ankk98.github.io/kriya-viz/)
+The name *Kriya* is a Sanskrit word meaning action or deed.
+
+**Deployed Here:** [https://ankk98.github.io/kriya-viz/](https://ankk98.github.io/kriya-viz/)
 
 ## Features
 
@@ -54,6 +56,10 @@ The app expects **one JSON file per video** with this shape (see `docs/plan.md` 
 
 The app does **not** read Parquet. Use a data-prep script (e.g. in the Action100M repo) to export one JSON per video from your dataset if needed. If your dataset lives under a `dataset` symlink, keep it out of the repo (e.g. via `.gitignore`); the visualizer never reads it at runtime.
 
+## Screenshots
+
+Screenshots are in the [screenshots/](screenshots/) folder.
+
 ## Repo layout
 
 ```
@@ -80,7 +86,6 @@ kriya-viz/
 ## Contributing
 
 Contributions are welcome. Feel free to open an [issue](https://github.com/Ankk98/kriya-viz/issues) or a [pull request](https://github.com/Ankk98/kriya-viz/pulls).
-
 ## License
 
 MIT License. See [LICENSE](LICENSE). Copyright (c) 2025 Mind and Motion Labs.
