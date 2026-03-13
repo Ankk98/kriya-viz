@@ -10,7 +10,7 @@
 
   /**
    * Render full timeline into container (scrollable).
-   * options: { timelineWidthPx, secondsInView, maxLevel, onSegmentClick, onSegmentDetails }
+   * options: { timelineWidthPx, secondsInView, maxLevel, onSegmentClick, onSegmentDetails, currentTime, formatTime, onRulerClick }
    * secondsInView: how many seconds fit in the visible width; scale so full duration is one long strip.
    */
   function renderTimeline(container, nodesByLevel, durationSec, focusId, activeNodeIds, nodeById, options) {
@@ -22,6 +22,10 @@
     var onSegmentClick = options.onSegmentClick || function () {};
     var onSegmentDetails = options.onSegmentDetails || function () {};
     var getNodeLabel = options.getNodeLabel || (Action100MData && Action100MData.getNodeLabel) || function () { return '(no label)'; };
+    var currentTime = options.currentTime != null ? Number(options.currentTime) : 0;
+    if (Number.isNaN(currentTime)) currentTime = 0;
+    var formatTime = options.formatTime || function (s) { return Math.floor(s) + 's'; };
+    var onRulerClick = options.onRulerClick || null;
 
     container.innerHTML = '';
     if (!nodesByLevel || !nodesByLevel.size || durationSec <= 0) return;
@@ -51,6 +55,56 @@
     var tracksInner = document.createElement('div');
     tracksInner.className = 'timeline-tracks-inner';
     tracksInner.style.width = totalWidthPx + 'px';
+
+    // Time ruler row: label in labels column
+    var rulerLabel = document.createElement('div');
+    rulerLabel.className = 'timeline-row-label timeline-ruler-label';
+    rulerLabel.textContent = 'Time';
+    labelsCol.appendChild(rulerLabel);
+
+    // Time ruler: ticks and labels
+    var rulerRow = document.createElement('div');
+    rulerRow.className = 'timeline-row timeline-ruler-row';
+    var ruler = document.createElement('div');
+    ruler.className = 'timeline-ruler' + (onRulerClick ? ' timeline-ruler--clickable' : '');
+    ruler.style.width = totalWidthPx + 'px';
+    ruler.title = onRulerClick ? 'Click to seek to time' : '';
+
+    var intervalSec = Math.max(5, Math.ceil(secondsInView / 6));
+    var t = 0;
+    while (t <= duration) {
+      var tick = document.createElement('div');
+      tick.className = 'timeline-ruler-tick';
+      tick.style.left = (t * pxPerSec) + 'px';
+      var label = document.createElement('span');
+      label.className = 'timeline-ruler-time';
+      label.textContent = formatTime(t);
+      tick.appendChild(label);
+      ruler.appendChild(tick);
+      t += intervalSec;
+    }
+    rulerRow.appendChild(ruler);
+    tracksInner.appendChild(rulerRow);
+
+    if (onRulerClick) {
+      ruler.addEventListener('click', function (ev) {
+        var scrollEl = container.querySelector('#timeline-tracks-scroll');
+        if (!scrollEl) return;
+        var scrollLeft = scrollEl.scrollLeft;
+        var scrollRect = scrollEl.getBoundingClientRect();
+        var offsetFromVisibleLeft = ev.clientX - scrollRect.left;
+        var x = scrollLeft + offsetFromVisibleLeft;
+        var sec = Math.max(0, Math.min(duration, x / pxPerSec));
+        onRulerClick(sec);
+      });
+    }
+
+    // Playhead (vertical line at current time)
+    var playhead = document.createElement('div');
+    playhead.className = 'timeline-playhead';
+    playhead.setAttribute('aria-hidden', 'true');
+    playhead.style.left = (currentTime * pxPerSec) + 'px';
+    tracksInner.appendChild(playhead);
 
     for (var l = 0; l < levels.length; l++) {
       var level = levels[l];
@@ -142,8 +196,20 @@
     }
   }
 
+  /**
+   * Move the playhead to the given time (px = currentTime * pxPerSec).
+   */
+  function updatePlayhead(container, currentTime, pxPerSec) {
+    var playhead = container && container.querySelector('.timeline-playhead');
+    if (!playhead || pxPerSec <= 0) return;
+    var t = Number(currentTime);
+    if (Number.isNaN(t) || t < 0) t = 0;
+    playhead.style.left = (t * pxPerSec) + 'px';
+  }
+
   global.Timeline = {
     renderTimeline: renderTimeline,
-    updateTimelineActiveState: updateTimelineActiveState
+    updateTimelineActiveState: updateTimelineActiveState,
+    updatePlayhead: updatePlayhead
   };
 })(typeof window !== 'undefined' ? window : this);

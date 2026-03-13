@@ -257,9 +257,13 @@
         maxLevel: maxLevel,
         onSegmentClick: onSegmentClick,
         onSegmentDetails: onSegmentDetails,
-        getNodeLabel: getNodeLabel
+        getNodeLabel: getNodeLabel,
+        currentTime: state.currentTime,
+        formatTime: formatTime,
+        onRulerClick: onRulerClick
       });
       scrollTimelineToCurrentTime();
+      Timeline.updatePlayhead(timelineContainer, state.currentTime, timelineW / secInView);
       var hasOverlap = Action100MData.hasOverlappingSegments(state.nodesByLevel);
       timelineOverlapWarning.hidden = !hasOverlap;
     }
@@ -292,6 +296,18 @@
       state.currentTime = t;
       onTimeupdate();
       scrollTimelineToCurrentTime();
+    }
+  }
+
+  function onRulerClick(sec) {
+    if (videoEl) {
+      videoEl.currentTime = sec;
+      state.currentTime = sec;
+      onTimeupdate();
+      scrollTimelineToCurrentTime();
+      var timelineW = getTimelineWidthPx();
+      var secInView = getSecondsInView();
+      Timeline.updatePlayhead(timelineContainer, state.currentTime, timelineW / secInView);
     }
   }
 
@@ -439,6 +455,7 @@
     var activeIds = activeNodes.map(function (n) { return n.node_id; });
 
     Timeline.updateTimelineActiveState(timelineContainer, activeIds);
+    Timeline.updatePlayhead(timelineContainer, state.currentTime, getTimelineWidthPx() / getSecondsInView());
     NodesPanel.renderNodesPanel(nodesPanel, activeNodes, state.nodesFocusId, state.nodeById, getNodeLabel, onSegmentDetails, openPathModal);
     scrollTimelineToCurrentTime();
 
@@ -772,8 +789,12 @@
           maxLevel: maxLevel,
           onSegmentClick: onSegmentClick,
           onSegmentDetails: onSegmentDetails,
-          getNodeLabel: getNodeLabel
+          getNodeLabel: getNodeLabel,
+          currentTime: state.currentTime,
+          formatTime: formatTime,
+          onRulerClick: onRulerClick
         });
+        Timeline.updatePlayhead(timelineContainer, state.currentTime, timelineW / secInView);
       }
     }, 150);
   });
