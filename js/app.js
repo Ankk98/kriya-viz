@@ -13,6 +13,7 @@
   var Metadata = window.Metadata;
   var NodeModal = window.NodeModal;
   var ListBrowse = window.ListBrowse;
+  var NodeSearch = window.NodeSearch;
 
   var state = {
     videoRecord: null,
@@ -25,11 +26,13 @@
     transcriptCues: null,
     transcriptPlain: null,
     listEntries: [],
-    currentVideoObjectURL: null
+    currentVideoObjectURL: null,
+    searchIndex: null
   };
 
   var timeupdateThrottleMs = 150;
   var lastTimeupdate = 0;
+  var searchDebounceHandle = null;
 
   function getTimelineWidthPx() {
     var scrollEl = document.getElementById('timeline-tracks-scroll');
@@ -103,6 +106,14 @@
   var sourceBtnOpenList = document.getElementById('source-btn-open-list');
   var btnChangeSource = document.getElementById('btn-change-source');
   var listRefreshFn = null;
+
+  var btnSearch = document.getElementById('btn-search');
+  var searchModal = document.getElementById('search-modal');
+  var searchModalClose = document.getElementById('search-modal-close');
+  var searchInput = document.getElementById('search-input');
+  var searchRegexEl = document.getElementById('search-regex');
+  var searchResultsEl = document.getElementById('search-results');
+  var searchStatusEl = document.getElementById('search-status');
 
   function formatTime(sec) {
     var s = Math.floor(Number(sec));
@@ -213,6 +224,7 @@
     } else {
       state.durationSec = 0;
     }
+    state.searchIndex = NodeSearch && nodes.length ? NodeSearch.buildIndex(nodes) : null;
   }
 
   function renderAll() {
@@ -285,6 +297,82 @@
 
   function onSegmentDetails(node) {
     if (NodeModal) NodeModal.openNodeModal(node);
+  }
+
+  function openSearchModal() {
+    if (!searchModal) return;
+    if (!state.videoRecord || !state.videoRecord.nodes || state.videoRecord.nodes.length === 0) {
+      if (searchStatusEl) searchStatusEl.textContent = 'Load a JSON file to search nodes.';
+    } else if (searchStatusEl) {
+      searchStatusEl.textContent = '';
+    }
+    searchModal.hidden = false;
+    searchModal.removeAttribute('aria-hidden');
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  }
+
+  function closeSearchModal() {
+    if (!searchModal) return;
+    searchModal.hidden = true;
+    searchModal.setAttribute('aria-hidden', 'true');
+  }
+
+  function onSearchSelectNode(node) {
+    closeSearchModal();
+    onSegmentClick(node);
+  }
+
+  function performSearchNow() {
+    if (!searchResultsEl) return;
+    var record = state.videoRecord;
+    var nodes = record && record.nodes ? record.nodes : [];
+    if (!NodeSearch || !nodes.length) {
+      searchResultsEl.innerHTML = '';
+      if (searchStatusEl) searchStatusEl.textContent = 'Load a JSON file to search nodes.';
+      return;
+    }
+
+    var query = searchInput ? searchInput.value : '';
+    if (!query || !query.trim()) {
+      searchResultsEl.innerHTML = '';
+      if (searchStatusEl) searchStatusEl.textContent = 'Type to search nodes.';
+      return;
+    }
+
+    if (!state.searchIndex) {
+      state.searchIndex = NodeSearch.buildIndex(nodes);
+    }
+    var useRegex = !!(searchRegexEl && searchRegexEl.checked);
+    var results = NodeSearch.search(state.searchIndex, query, { regex: useRegex });
+    if (searchStatusEl) {
+      if (!results.length) {
+        searchStatusEl.textContent = 'No matches.';
+      } else {
+        searchStatusEl.textContent = 'Showing ' + Math.min(results.length, 200) + ' of ' + results.length + ' matches.';
+      }
+    }
+    NodeSearch.renderResults(searchResultsEl, results, {
+      nodeById: state.nodeById,
+      focusId: state.nodesFocusId,
+      onSelect: onSearchSelectNode,
+      maxResults: 200,
+      query: query,
+      regex: useRegex
+    });
+  }
+
+  function scheduleSearch() {
+    if (searchDebounceHandle) {
+      clearTimeout(searchDebounceHandle);
+      searchDebounceHandle = null;
+    }
+    searchDebounceHandle = setTimeout(function () {
+      searchDebounceHandle = null;
+      performSearchNow();
+    }, 160);
   }
 
   function openPathModal(node) {
@@ -627,6 +715,18 @@
     var aboutBackdrop = aboutModal.querySelector('.modal-backdrop');
     if (aboutBackdrop) aboutBackdrop.addEventListener('click', closeAboutModal);
   }
+  if (btnSearch) btnSearch.addEventListener('click', openSearchModal);
+  if (searchModalClose) searchModalClose.addEventListener('click', closeSearchModal);
+  if (searchModal) {
+    var searchBackdrop = searchModal.querySelector('.modal-backdrop');
+    if (searchBackdrop) searchBackdrop.addEventListener('click', closeSearchModal);
+  }
+  if (searchInput) {
+    searchInput.addEventListener('input', scheduleSearch);
+  }
+  if (searchRegexEl) {
+    searchRegexEl.addEventListener('change', performSearchNow);
+  }
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       if (listDrawer && listDrawer.classList.contains('list-drawer--open')) closeListDrawer();
@@ -634,6 +734,7 @@
       else if (metadataModal && !metadataModal.hidden) closeMetadataModal();
       else if (transcriptModal && !transcriptModal.hidden) closeTranscriptModal();
       else if (pathModal && !pathModal.hidden) closePathModal();
+      else if (searchModal && !searchModal.hidden) closeSearchModal();
       else if (aboutModal && !aboutModal.hidden) closeAboutModal();
     }
   });
@@ -689,6 +790,9 @@
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       videoEl.currentTime = Math.min(videoEl.duration || 0, videoEl.currentTime + 5);
+    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      openSearchModal();
     }
   });
 

@@ -18,6 +18,8 @@
       <span class="top-bar-sep">|</span>
       <button type="button" class="text-btn" id="btn-metadata">Metadata</button>
       <button type="button" class="text-btn" id="btn-transcript" hidden>Transcript</button>
+      <span class="top-bar-sep">|</span>
+      <button type="button" class="text-btn" id="btn-search" title="Search nodes (Ctrl+K)">Search</button>
     </div>
     <div class="top-bar-right">
       <button type="button" class="top-bar-icon-btn" id="btn-about" aria-label="About this tool" title="About">
@@ -257,6 +259,33 @@
     </div>
   </div>
 
+  <div id="search-modal" class="modal" role="dialog" aria-labelledby="search-modal-title" aria-modal="true" hidden>
+    <div class="modal-backdrop"></div>
+    <div class="modal-content search-modal-content">
+      <div class="modal-header">
+        <h2 id="search-modal-title">Search nodes</h2>
+        <button type="button" class="modal-close" id="search-modal-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body search-modal-body">
+        <div class="search-input-row">
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Search text or /regex/ across node annotations"
+            autocomplete="off"
+          >
+          <label class="search-flag">
+            <input type="checkbox" id="search-regex">
+            Regex
+          </label>
+        </div>
+        <div id="search-status" class="search-status" aria-live="polite"></div>
+        <div id="search-results" class="search-results" aria-label="Search results"></div>
+      </div>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/srt.js"></script>
   <script src="js/timeline.js"></script>
@@ -264,6 +293,7 @@
   <script src="js/metadata.js"></script>
   <script src="js/modal.js"></script>
   <script src="js/list.js"></script>
+  <script src="js/search.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
