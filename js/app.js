@@ -63,6 +63,7 @@
   var nodesAnnotationEl = document.getElementById('nodes-annotation');
   var timelineAnnotationEl = document.getElementById('timeline-annotation');
   var videoLabel = document.getElementById('video-label');
+  var videoUidLabel = document.getElementById('video-uid-label');
   var timelineContainer = document.getElementById('timeline-container');
   var timelineEmpty = document.getElementById('timeline-empty');
   var timelineOverlapWarning = document.getElementById('timeline-overlap-warning');
@@ -235,6 +236,16 @@
     // Video label
     var title = meta.title || (record && record.video_uid) || '—';
     if (videoLabel) videoLabel.textContent = 'Video: ' + (title || '—');
+    var videoUid = record && record.video_uid ? String(record.video_uid) : '';
+    if (videoUidLabel) {
+      if (videoUid) {
+        videoUidLabel.textContent = 'UID: ' + videoUid;
+        videoUidLabel.hidden = false;
+      } else {
+        videoUidLabel.textContent = '';
+        videoUidLabel.hidden = true;
+      }
+    }
 
     nodesTimeEl.textContent = '(' + formatTime(state.currentTime) + ')';
 
@@ -488,7 +499,54 @@
       d.textContent = desc;
       metadataModalBody.appendChild(d);
     }
-    if (!title && !desc) metadataModalBody.textContent = 'No title or description.';
+
+    var extraKeys = [];
+    if (meta && typeof meta === 'object') {
+      for (var key in meta) {
+        if (!Object.prototype.hasOwnProperty.call(meta, key)) continue;
+        if (key === 'title' || key === 'description' || key === 'transcript') continue;
+        extraKeys.push(key);
+      }
+    }
+
+    if (extraKeys.length > 0) {
+      extraKeys.sort();
+      var list = document.createElement('dl');
+      list.className = 'metadata-extra';
+      for (var i = 0; i < extraKeys.length; i++) {
+        var k = extraKeys[i];
+        var rawVal = meta[k];
+        var textVal;
+        if (rawVal == null) {
+          textVal = 'null';
+        } else if (typeof rawVal === 'string' || typeof rawVal === 'number' || typeof rawVal === 'boolean') {
+          textVal = String(rawVal);
+        } else {
+          try {
+            textVal = JSON.stringify(rawVal);
+          } catch (e) {
+            textVal = String(rawVal);
+          }
+        }
+        if (textVal.length > 200) {
+          textVal = textVal.slice(0, 197) + '…';
+        }
+
+        var dt = document.createElement('dt');
+        dt.className = 'metadata-extra-key';
+        dt.textContent = k;
+        var dd = document.createElement('dd');
+        dd.className = 'metadata-extra-value';
+        dd.textContent = textVal;
+        list.appendChild(dt);
+        list.appendChild(dd);
+      }
+      metadataModalBody.appendChild(list);
+    }
+
+    if (!title && !desc && extraKeys.length === 0) {
+      metadataModalBody.textContent = 'No metadata available.';
+    }
     if (metadataModal) {
       metadataModal.hidden = false;
       metadataModal.removeAttribute('aria-hidden');
